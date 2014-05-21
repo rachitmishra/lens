@@ -5,12 +5,14 @@ import java.util.List;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
@@ -28,7 +30,6 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import com.practo.lens.view.CropView;
-import com.practo.lens.view.CropView.Helper;
 
 public class MainActivity extends Activity {
 
@@ -90,18 +91,21 @@ public class MainActivity extends Activity {
 			}
 
 		});
-		
+
 	}
 	
-	public BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
+	public BaseLoaderCallback mOpenCVLoaderCallback = new BaseLoaderCallback(this) {
 
 		@Override
 		public void onManagerConnected(int status) {
 			switch (status) {
 			case LoaderCallbackInterface.SUCCESS:
-				Log.i(TAG, "OpenCV loaded !");
-				sourceMatrix = new Mat(captureView.getDrawable().getMinimumWidth(), captureView.getDrawable().getMinimumHeight(), CvType.CV_8UC4);
-				resultMatrix = new Mat();
+				Log.i(TAG, "OpenCV loaded.");
+				sourceBitmap = ((BitmapDrawable) captureView.getDrawable()).getBitmap();
+				sourceMatrix = new Mat ( sourceBitmap.getHeight(), sourceBitmap.getWidth(), CvType.CV_8U, new Scalar(4));
+				
+				sourceBitmap = sourceBitmap.copy(Bitmap.Config.ARGB_8888, true);
+
 				break;
 			default:
 				super.onManagerConnected(status);
@@ -120,8 +124,13 @@ public class MainActivity extends Activity {
 	}
 
 	private void crop() {
-		sourceBitmap = ((BitmapDrawable) captureView.getDrawable()).getBitmap();
 
+		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mOpenCVLoaderCallback))
+	    {
+	      Log.e(TAG, "Cannot connect to OpenCV Manager.");
+	    }
+		
+		
 		Utils.bitmapToMat(sourceBitmap, sourceMatrix);
 
 		resultMatrix = extractPage();
