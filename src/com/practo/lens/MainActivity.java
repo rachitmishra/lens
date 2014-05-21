@@ -3,6 +3,8 @@ package com.practo.lens;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -26,6 +28,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import com.practo.lens.view.CropView;
+import com.practo.lens.view.CropView.Helper;
 
 public class MainActivity extends Activity {
 
@@ -33,13 +36,15 @@ public class MainActivity extends Activity {
 
 	private CropView cropView;
 
-	private Mat imageMatrix, sourceMatrix, resultMatrix;
+	private Mat sourceMatrix, resultMatrix;
 
 	private Bitmap sourceBitmap, resultBitmap;
 
 	private Button crop, cancel, capture;
 
 	private static final int REQUEST_IMAGE_CAPTURE = 1;
+
+	private static final String TAG = "Lens";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -85,39 +90,58 @@ public class MainActivity extends Activity {
 			}
 
 		});
-
+		
 	}
+	
+	public BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
+
+		@Override
+		public void onManagerConnected(int status) {
+			switch (status) {
+			case LoaderCallbackInterface.SUCCESS:
+				Log.i(TAG, "OpenCV loaded !");
+				sourceMatrix = new Mat(captureView.getDrawable().getMinimumWidth(), captureView.getDrawable().getMinimumHeight(), CvType.CV_8UC4);
+				resultMatrix = new Mat();
+				break;
+			default:
+				super.onManagerConnected(status);
+
+			}
+		}
+	};
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-	        Bundle extras = data.getExtras();
-	        Bitmap imageBitmap = (Bitmap) extras.get("data");
-	        captureView.setImageBitmap(imageBitmap);
-	    }
+			Bundle extras = data.getExtras();
+			Bitmap imageBitmap = (Bitmap) extras.get("data");
+			captureView.setImageBitmap(imageBitmap);
+		}
 	}
-	
+
 	private void crop() {
 		sourceBitmap = ((BitmapDrawable) captureView.getDrawable()).getBitmap();
 
-		Utils.bitmapToMat(sourceBitmap, imageMatrix);
+		Utils.bitmapToMat(sourceBitmap, sourceMatrix);
 
 		resultMatrix = extractPage();
+		
 		Utils.matToBitmap(resultMatrix, resultBitmap);
+		
 		captureView.setBackground(new BitmapDrawable(getResources(),
 				resultBitmap));
 	}
 
 	public Mat extractPage() {
-		Imgproc.Canny(imageMatrix, imageMatrix, 50, 50);
+		Imgproc.Canny(sourceMatrix, sourceMatrix, 50, 50);
 
 		// apply gaussian blur to smoothen lines of dots
-		Imgproc.GaussianBlur(imageMatrix, imageMatrix,
+		Imgproc.GaussianBlur(sourceMatrix, sourceMatrix,
 				new org.opencv.core.Size(5, 5), 5);
 
 		// find the contours
 		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-		Imgproc.findContours(imageMatrix, contours, new Mat(),
+		Imgproc.findContours(sourceMatrix, contours, new Mat(),
 				Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
 		double maxArea = -1;
@@ -153,10 +177,7 @@ public class MainActivity extends Activity {
 			}
 		}
 
-		Imgproc.cvtColor(imageMatrix, imageMatrix, Imgproc.COLOR_BayerBG2RGB);
-
-		//sourceMatrix = Highgui.imread(Environment.getExternalStorageDirectory()
-			//	.getAbsolutePath() + "/scan/p/1.jpg");
+		Imgproc.cvtColor(sourceMatrix, sourceMatrix, Imgproc.COLOR_BayerBG2RGB);
 
 		double[] tempDouble;
 		tempDouble = approxCurve.get(0, 0);
@@ -178,7 +199,7 @@ public class MainActivity extends Activity {
 		source.add(p3);
 		source.add(p4);
 		Mat startMatrix = Converters.vector_Point2f_to_Mat(source);
-		Mat resultMatrix = warp(imageMatrix, startMatrix);
+		Mat resultMatrix = warp(sourceMatrix, startMatrix);
 		return resultMatrix;
 	}
 
@@ -186,27 +207,29 @@ public class MainActivity extends Activity {
 		int resultWidth = 1000;
 		int resultHeight = 1000;
 
-		Mat outputMat = new Mat(resultWidth, resultHeight, CvType.CV_8UC4);
+		Mat outputMatrix = new Mat(resultWidth, resultHeight, CvType.CV_8UC4);
 
 		Point ocvPOut1 = new Point(0, 0);
 		Point ocvPOut2 = new Point(0, resultHeight);
 		Point ocvPOut3 = new Point(resultWidth, resultHeight);
 		Point ocvPOut4 = new Point(resultWidth, 0);
+		
 		List<Point> dest = new ArrayList<Point>();
+		
 		dest.add(ocvPOut1);
 		dest.add(ocvPOut2);
 		dest.add(ocvPOut3);
 		dest.add(ocvPOut4);
-		
+
 		Mat endMatrix = Converters.vector_Point2f_to_Mat(dest);
 
-		Mat perspectiveTransform = Imgproc
-				.getPerspectiveTransform(startMatrix, endMatrix);
+		Mat perspectiveTransform = Imgproc.getPerspectiveTransform(startMatrix,
+				endMatrix);
 
-		Imgproc.warpPerspective(inputMatrix, outputMat, perspectiveTransform,
+		Imgproc.warpPerspective(inputMatrix, outputMatrix, perspectiveTransform,
 				new Size(resultWidth, resultHeight), Imgproc.INTER_CUBIC);
 
-		return outputMat;
+		return outputMatrix;
 	}
 
 }
