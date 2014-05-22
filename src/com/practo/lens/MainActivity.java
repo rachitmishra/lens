@@ -2,6 +2,7 @@ package com.practo.lens;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -20,6 +21,7 @@ import org.opencv.utils.Converters;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -37,7 +39,7 @@ public class MainActivity extends Activity {
 
 	private CropView cropView;
 
-	private Mat sourceMatrix, resultMatrix;
+	private Mat sourceMatrix, tempMatrix, resultMatrix;
 
 	private Bitmap sourceBitmap, resultBitmap;
 
@@ -45,7 +47,7 @@ public class MainActivity extends Activity {
 
 	private static final int REQUEST_IMAGE_CAPTURE = 1;
 
-	private static final String TAG = "Lens";
+	private static final String TAG = "Tagged";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -81,11 +83,9 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View arg0) {
 
-				Intent takePictureIntent = new Intent(
-						MediaStore.ACTION_IMAGE_CAPTURE);
+				Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 				if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-					startActivityForResult(takePictureIntent,
-							REQUEST_IMAGE_CAPTURE);
+					startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
 				}
 
 			}
@@ -93,19 +93,22 @@ public class MainActivity extends Activity {
 		});
 
 	}
-	
+
 	public BaseLoaderCallback mOpenCVLoaderCallback = new BaseLoaderCallback(this) {
 
 		@Override
 		public void onManagerConnected(int status) {
 			switch (status) {
 			case LoaderCallbackInterface.SUCCESS:
-				Log.i(TAG, "OpenCV loaded.");
+				Log.i(TAG, "OpenCV Manager connected.");
 				sourceBitmap = ((BitmapDrawable) captureView.getDrawable()).getBitmap();
-				sourceMatrix = new Mat ( sourceBitmap.getHeight(), sourceBitmap.getWidth(), CvType.CV_8U, new Scalar(4));
-				
+				sourceMatrix = new Mat(sourceBitmap.getHeight(), sourceBitmap.getWidth(), CvType.CV_8U, new Scalar(4));
+				tempMatrix = sourceMatrix;
 				sourceBitmap = sourceBitmap.copy(Bitmap.Config.ARGB_8888, true);
 
+				break;
+			case LoaderCallbackInterface.INIT_FAILED:
+				Log.i(TAG, "Init failed.");
 				break;
 			default:
 				super.onManagerConnected(status);
@@ -123,93 +126,110 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private void crop() {
+	@Override
+	protected void onResume() {
+		super.onResume();
 
-		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mOpenCVLoaderCallback))
-	    {
-	      Log.e(TAG, "Cannot connect to OpenCV Manager.");
-	    }
-		
-		
-		Utils.bitmapToMat(sourceBitmap, sourceMatrix);
-
-		resultMatrix = extractPage();
-		
-		Utils.matToBitmap(resultMatrix, resultBitmap);
-		
-		captureView.setBackground(new BitmapDrawable(getResources(),
-				resultBitmap));
+		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, mOpenCVLoaderCallback)) {
+			Log.e(TAG, "Cannot connect to OpenCV Manager.");
+		}
 	}
 
-	public Mat extractPage() {
-		Imgproc.Canny(sourceMatrix, sourceMatrix, 50, 50);
+	private void crop() {
 
-		// apply gaussian blur to smoothen lines of dots
-		Imgproc.GaussianBlur(sourceMatrix, sourceMatrix,
-				new org.opencv.core.Size(5, 5), 5);
+		if (sourceBitmap == null)
+			Log.e(TAG, "Source bitmap is null.");
 
-		// find the contours
+		Utils.bitmapToMat(sourceBitmap, sourceMatrix);
+
+		resultMatrix = extractPage(sourceMatrix);
+
+		//resultBitmap = Bitmap.createBitmap(resultMatrix.width(), resultMatrix.height(), Bitmap.Config.ARGB_8888);
+
+		// Utils.matToBitmap(resultMatrix, resultBitmap);
+
+		// captureView.setBackground(new BitmapDrawable(getResources(), resultBitmap));
+	}
+
+	public Mat extractPage(Mat sourceMatrix) {
+
 		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-		Imgproc.findContours(sourceMatrix, contours, new Mat(),
-				Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
-		double maxArea = -1;
-		int maxAreaIdx = -1;
-		Log.d("size", Integer.toString(contours.size()));
-		MatOfPoint temp_contour = contours.get(0); // the largest is at the
-													// index 0 for starting
-													// point
-		MatOfPoint2f approxCurve = new MatOfPoint2f();
-		MatOfPoint largest_contour = contours.get(0);
-		// largest_contour.ge
-		List<MatOfPoint> largest_contours = new ArrayList<MatOfPoint>();
-		// Imgproc.drawContours(imgSource,contours, -1, new Scalar(0, 255, 0),
-		// 1);
+		Imgproc.cvtColor(sourceMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
+
+		Imgproc.Canny(tempMatrix, tempMatrix, 50, 50);
+
+		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new org.opencv.core.Size(5, 5), 5);
+
+		Imgproc.findContours(tempMatrix, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+
+		double bigContour = -1;
+		
+		int bigContourId = -1;
+
+		MatOfPoint tempContour = contours.get(0);
+		MatOfPoint2f approxCurveMatrix = new MatOfPoint2f();
+		MatOfPoint largestContour = contours.get(0);
 
 		for (int idx = 0; idx < contours.size(); idx++) {
-			temp_contour = contours.get(idx);
-			double contourarea = Imgproc.contourArea(temp_contour);
-			// compare this contour to the previous largest contour found
-			if (contourarea > maxArea) {
-				// check if this contour is a square
-				MatOfPoint2f new_mat = new MatOfPoint2f(temp_contour.toArray());
-				int contourSize = (int) temp_contour.total();
-				MatOfPoint2f approxCurve_temp = new MatOfPoint2f();
-				Imgproc.approxPolyDP(new_mat, approxCurve_temp,
-						contourSize * 0.05, true);
-				if (approxCurve_temp.total() == 4) {
-					maxArea = contourarea;
-					maxAreaIdx = idx;
-					approxCurve = approxCurve_temp;
-					largest_contour = temp_contour;
+			tempContour = contours.get(idx);
+			double contourArea = Imgproc.contourArea(tempContour);
+			
+			if (contourArea > bigContour) {
+			
+				MatOfPoint2f newCurveMatrix = new MatOfPoint2f(tempContour.toArray());
+				int contourSize = (int) tempContour.total();
+				MatOfPoint2f tempCurveMatrix = new MatOfPoint2f();
+				
+				Imgproc.approxPolyDP(newCurveMatrix, tempCurveMatrix, contourSize * 0.05, true);
+				
+				if (tempCurveMatrix.total() == 4) {
+					bigContour = contourArea;
+					bigContourId = idx;
+					approxCurveMatrix = tempCurveMatrix;
+					largestContour = tempContour;
 				}
 			}
 		}
 
-		Imgproc.cvtColor(sourceMatrix, sourceMatrix, Imgproc.COLOR_BayerBG2RGB);
+		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BayerBG2RGB);
 
-		double[] tempDouble;
-		tempDouble = approxCurve.get(0, 0);
+		double[] tempDouble = approxCurveMatrix.get(0, 0);
+
 		Point p1 = new Point(tempDouble[0], tempDouble[1]);
-		// Core.circle(imgSource,p1,55,new Scalar(0,0,255));
-		// Imgproc.warpAffine(sourceImage, dummy, rotImage,sourceImage.size());
-		tempDouble = approxCurve.get(1, 0);
+		CropView.Point pA = cropView.new Point(tempDouble[0], tempDouble[1]);
+
+		tempDouble = approxCurveMatrix.get(1, 0);
 		Point p2 = new Point(tempDouble[0], tempDouble[1]);
-		// Core.circle(imgSource,p2,150,new Scalar(255,255,255));
-		tempDouble = approxCurve.get(2, 0);
+		CropView.Point pB = cropView.new Point(tempDouble[0], tempDouble[1]);
+
+		tempDouble = approxCurveMatrix.get(2, 0);
 		Point p3 = new Point(tempDouble[0], tempDouble[1]);
-		// Core.circle(imgSource,p3,200,new Scalar(255,0,0));
-		tempDouble = approxCurve.get(3, 0);
+		CropView.Point pC = cropView.new Point(tempDouble[0], tempDouble[1]);
+
+		tempDouble = approxCurveMatrix.get(3, 0);
 		Point p4 = new Point(tempDouble[0], tempDouble[1]);
-		// Core.circle(imgSource,p4,100,new Scalar(0,0,255));
+		CropView.Point pD = cropView.new Point(tempDouble[0], tempDouble[1]);
+
 		List<Point> source = new ArrayList<Point>();
+		ArrayList<CropView.Point> cornerPoints = new ArrayList<CropView.Point>();
+
 		source.add(p1);
 		source.add(p2);
 		source.add(p3);
 		source.add(p4);
-		Mat startMatrix = Converters.vector_Point2f_to_Mat(source);
-		Mat resultMatrix = warp(sourceMatrix, startMatrix);
-		return resultMatrix;
+
+		cornerPoints.add(pA);
+		cornerPoints.add(pB);
+		cornerPoints.add(pC);
+		cornerPoints.add(pD);
+
+		cropView.init(cornerPoints);
+		cropView.invalidate();
+
+		//Mat startMatrix = Converters.vector_Point2f_to_Mat(source);
+		//Mat resultMatrix = warp(sourceMatrix, startMatrix);
+		return null;
 	}
 
 	private Mat warp(Mat inputMatrix, Mat startMatrix) {
@@ -222,9 +242,9 @@ public class MainActivity extends Activity {
 		Point ocvPOut2 = new Point(0, resultHeight);
 		Point ocvPOut3 = new Point(resultWidth, resultHeight);
 		Point ocvPOut4 = new Point(resultWidth, 0);
-		
+
 		List<Point> dest = new ArrayList<Point>();
-		
+
 		dest.add(ocvPOut1);
 		dest.add(ocvPOut2);
 		dest.add(ocvPOut3);
@@ -232,11 +252,9 @@ public class MainActivity extends Activity {
 
 		Mat endMatrix = Converters.vector_Point2f_to_Mat(dest);
 
-		Mat perspectiveTransform = Imgproc.getPerspectiveTransform(startMatrix,
-				endMatrix);
+		Mat perspectiveTransform = Imgproc.getPerspectiveTransform(startMatrix, endMatrix);
 
-		Imgproc.warpPerspective(inputMatrix, outputMatrix, perspectiveTransform,
-				new Size(resultWidth, resultHeight), Imgproc.INTER_CUBIC);
+		Imgproc.warpPerspective(inputMatrix, outputMatrix, perspectiveTransform, new Size(resultWidth, resultHeight), Imgproc.INTER_CUBIC);
 
 		return outputMatrix;
 	}

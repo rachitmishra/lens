@@ -34,7 +34,7 @@ public class CropView extends View {
 	private static boolean init = true;
 
 	private boolean error;
-	
+
 	private double canvasWidth, canvasHeight;
 
 	private ArrayList<Point> touchHandles = new ArrayList<CropView.Point>();
@@ -58,10 +58,8 @@ public class CropView extends View {
 		touchHandles.clear();
 		touchHandles.add(new Point(defaultOffset, defaultOffset));
 		touchHandles.add(new Point(canvasWidth - defaultOffset, defaultOffset));
-		touchHandles.add(new Point(canvasWidth - defaultOffset, canvasHeight
-				- defaultOffset));
-		touchHandles
-				.add(new Point(defaultOffset, canvasHeight - defaultOffset));
+		touchHandles.add(new Point(canvasWidth - defaultOffset, canvasHeight - defaultOffset));
+		touchHandles.add(new Point(defaultOffset, canvasHeight - defaultOffset));
 		setTouchHandles();
 	}
 
@@ -77,6 +75,7 @@ public class CropView extends View {
 			init();
 			init = false;
 		}
+		
 		drawCorners(canvas);
 		drawLines(canvas);
 		// drawBackground(canvas);
@@ -99,7 +98,7 @@ public class CropView extends View {
 		touchHandles.get(CORNER_THREE).setNext(touchHandles.get(CORNER_FOUR));
 		touchHandles.get(CORNER_FOUR).setNext(touchHandles.get(CORNER_ONE));
 	}
-
+	
 	private void drawLines(Canvas canvas) {
 
 		if (touchHandles.isEmpty()) {
@@ -109,48 +108,23 @@ public class CropView extends View {
 		Path linePath = new Path();
 
 		// Move to Point 1
-		linePath.moveTo(
-				(float) (touchHandles.get(CORNER_ONE).getX() + defaultOffset),
-				(float) (touchHandles.get(CORNER_ONE).getY()));
+		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getX()), (float) (touchHandles.get(CORNER_ONE).getY()));
 
 		// Line to Point 2
-		linePath.lineTo(
-				(float) (touchHandles.get(CORNER_ONE).getNext().getX() - defaultOffset),
+		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getX()),
 				(float) (touchHandles.get(CORNER_ONE).getNext().getY()));
 
-		// Move to Point 2
-		linePath.moveTo(
-				(float) (touchHandles.get(CORNER_ONE).getNext().getX()),
-				(float) (touchHandles.get(CORNER_ONE).getNext().getY() + defaultOffset));
-
 		// Line to Point 3
-		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext()
-				.getNext().getX()), (float) (touchHandles.get(CORNER_ONE)
-				.getNext().getNext().getY() - defaultOffset));
-
-		// Move to Point 3
-		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getNext()
-				.getNext().getX() - defaultOffset),
-				(float) (touchHandles.get(CORNER_ONE).getNext().getNext()
-						.getY()));
+		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getX()), (float) (touchHandles.get(CORNER_ONE).getNext().getNext()
+				.getY()));
 
 		// Line to Point 4
-		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext()
-				.getNext().getNext().getX() + defaultOffset),
-				(float) (touchHandles.get(CORNER_ONE).getNext().getNext()
-						.getY()));
+		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getNext().getX()),
+				(float) (touchHandles.get(CORNER_ONE).getNext().getNext().getY()));
 
-		// Move to Point 4
-		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getNext()
-				.getNext().getNext().getX()),
-				(float) (touchHandles.get(CORNER_ONE).getNext().getNext()
-						.getNext().getY() - defaultOffset));
 
 		// Line to Point 1
-		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getX()),
-				(float) (touchHandles.get(CORNER_ONE).getY() + defaultOffset));
-
-		linePath.close();
+		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getX()), (float) (touchHandles.get(CORNER_ONE).getY()));
 
 		Paint paint = Helper.getLinePaint(context);
 		if (error) {
@@ -159,6 +133,53 @@ public class CropView extends View {
 		canvas.drawPath(linePath, paint);
 	}
 
+//	private void drawLines(Canvas canvas) {
+//
+//		if (touchHandles.isEmpty()) {
+//			return;
+//		}
+//
+//		Path linePath = new Path();
+//
+//		// Move to Point 1
+//		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getX() + defaultOffset), (float) (touchHandles.get(CORNER_ONE).getY()));
+//
+//		// Line to Point 2
+//		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getX() - defaultOffset),
+//				(float) (touchHandles.get(CORNER_ONE).getNext().getY()));
+//
+//		// Move to Point 2
+//		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getNext().getX()),
+//				(float) (touchHandles.get(CORNER_ONE).getNext().getY() + defaultOffset));
+//
+//		// Line to Point 3
+//		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getX()), (float) (touchHandles.get(CORNER_ONE).getNext().getNext()
+//				.getY() - defaultOffset));
+//
+//		// Move to Point 3
+//		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getX() - defaultOffset), (float) (touchHandles.get(CORNER_ONE)
+//				.getNext().getNext().getY()));
+//
+//		// Line to Point 4
+//		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getNext().getX() + defaultOffset),
+//				(float) (touchHandles.get(CORNER_ONE).getNext().getNext().getY()));
+//
+//		// Move to Point 4
+//		linePath.moveTo((float) (touchHandles.get(CORNER_ONE).getNext().getNext().getNext().getX()), (float) (touchHandles.get(CORNER_ONE).getNext()
+//				.getNext().getNext().getY() - defaultOffset));
+//
+//		// Line to Point 1
+//		linePath.lineTo((float) (touchHandles.get(CORNER_ONE).getX()), (float) (touchHandles.get(CORNER_ONE).getY() + defaultOffset));
+//
+//		linePath.close();
+//
+//		Paint paint = Helper.getLinePaint(context);
+//		if (error) {
+//			paint = Helper.getLineErrorPaint(context);
+//		}
+//		canvas.drawPath(linePath, paint);
+//	}
+
 	private void drawCorners(Canvas canvas) {
 
 		if (touchHandles.isEmpty()) {
@@ -166,9 +187,8 @@ public class CropView extends View {
 		}
 
 		for (Point point : touchHandles) {
-			canvas.drawCircle((float) point.getX(), (float) point.getY(),
-					Helper.getCornerRadius(context),
-					Helper.getCornerPaint(context));
+			canvas.drawCircle((float) point.getX(), (float) point.getY(), Helper.getCornerRadius(context), Helper.getCornerPaint(context));
+			canvas.drawCircle((float) point.getX(), (float) point.getY(), Helper.getCornerRadius(context)*1/2, Helper.getCornerLightPaint(context));
 		}
 	}
 
@@ -202,26 +222,37 @@ public class CropView extends View {
 
 	private void onTouchDown(Point p) {
 
-		Log.w("Tagged", "Touch Down " + p.getX() + " --- " + p.getY());
-		getPressedHandled(p);
-		updateCropWindow(p);
+		touchPoint = getPressedHandled(p);
+
+		if (touchPoint == null) {
+			return;
+		}
+
 		invalidate();
 	}
 
-	private void getPressedHandled(Point p) {
+	private Point getPressedHandled(Point p) {
+
+		Point touchPoint = null;
+
 		for (Point c : touchHandles) {
-			
+
 			double differenceSquare = Math.pow(p.getX() - c.getX(), 2) + Math.pow(p.getX() - c.getX(), 2);
-			double radiusSquare = Math.pow(defaultOffset + defaultOffset, 2);
+			double radiusSquare = Math.pow(defaultOffset + defaultOffset + defaultOffset, 2);
 
 			if (0 <= differenceSquare && differenceSquare <= radiusSquare) {
 				touchPoint = c;
 			}
 		}
+
+		return touchPoint;
 	}
 
 	private void onTouchUp() {
-
+		if (touchPoint == null) {
+			return;
+		}
+		
 		touchPoint = null;
 		invalidate();
 	}
@@ -235,15 +266,17 @@ public class CropView extends View {
 	}
 
 	private void updateCropWindow(Point p) {
-		if (touchPoint == null) {
-			return;
-		}
-
-		if (isOverlapping(p) || isOutbound(p)) {
+		
+		if (isOverlapping(p) || isOutbound(p) || isOutBoundSelf(p) || isDiagonal(p)) {
 			return;
 		}
 		
-		touchHandles.set(touchHandles.indexOf(touchPoint), p);
+		if(touchHandles.indexOf(touchPoint) == -1) {
+			return;
+		}
+		
+		touchHandles.get(touchHandles.indexOf(touchPoint)).setX(p.getX());
+		touchHandles.get(touchHandles.indexOf(touchPoint)).setY(p.getY());
 		invalidate();
 	}
 
@@ -262,11 +295,18 @@ public class CropView extends View {
 		double x = p.getX();
 		double y = p.getY();
 
-		if ((x > canvasWidth - defaultOffset || x < defaultOffset)
-				|| (y > canvasHeight - defaultOffset || y < defaultOffset)) {
+		if ((x > canvasWidth - defaultOffset || x < defaultOffset) || (y > canvasHeight - defaultOffset || y < defaultOffset)) {
 			return true;
 		}
 
+		return false;
+	}
+
+	private boolean isDiagonal(Point p) {
+		return false;
+	}
+
+	private boolean isOutBoundSelf(Point p) {
 		return false;
 	}
 
@@ -306,8 +346,7 @@ public class CropView extends View {
 		}
 
 		public double getDistance(Point p) {
-			return Math.sqrt(Math.pow((p.getX() - this.x), 2)
-					+ Math.pow((p.getY() - this.y), 2));
+			return Math.sqrt(Math.pow((p.getX() - this.x), 2) + Math.pow((p.getY() - this.y), 2));
 		}
 
 	}
@@ -321,9 +360,11 @@ public class CropView extends View {
 		public static final int DEFAULT_LINE_THICKNESS = 5;
 
 		public static final int DEFAULT_CORNER_COLOR = 0x900099CC;
+		
+		public static final int DEFAULT_CORNER_LIGHT_COLOR = 0x450099CC;
 
 		public static final int DEFAULT_LINE_COLOR = 0x450099CC;
-		
+
 		public static final int DEFAULT_LINE_ERROR_COLOR = 0x4500CCEE;
 
 		public static final int DEFAULT_BACKGROUND_COLOR = 0x150099CC;
@@ -336,11 +377,17 @@ public class CropView extends View {
 			cornerPaint.setStyle(Paint.Style.FILL);
 			return cornerPaint;
 		}
+		
+		public static Paint getCornerLightPaint(Context context) {
+			final Paint cornerPaint = new Paint();
+			cornerPaint.setColor(DEFAULT_CORNER_LIGHT_COLOR);
+			cornerPaint.setStyle(Paint.Style.FILL);
+			return cornerPaint;
+		}
 
 		public static Paint getLinePaint(Context context) {
-			final float lineThicknessPx = TypedValue.applyDimension(
-					TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_THICKNESS,
-					context.getResources().getDisplayMetrics());
+			final float lineThicknessPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_THICKNESS, context.getResources()
+					.getDisplayMetrics());
 
 			final Paint borderPaint = new Paint();
 			borderPaint.setColor(DEFAULT_LINE_COLOR);
@@ -348,11 +395,10 @@ public class CropView extends View {
 			borderPaint.setStyle(Paint.Style.STROKE);
 			return borderPaint;
 		}
-		
+
 		public static Paint getLineErrorPaint(Context context) {
-			final float lineThicknessPx = TypedValue.applyDimension(
-					TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_THICKNESS,
-					context.getResources().getDisplayMetrics());
+			final float lineThicknessPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_THICKNESS, context.getResources()
+					.getDisplayMetrics());
 
 			final Paint borderPaint = new Paint();
 			borderPaint.setColor(DEFAULT_LINE_ERROR_COLOR);
@@ -369,15 +415,11 @@ public class CropView extends View {
 		}
 
 		public static float getCornerRadius(Context context) {
-			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-					DEFAULT_CIRCLE_RADIUS, context.getResources()
-							.getDisplayMetrics());
+			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_CIRCLE_RADIUS, context.getResources().getDisplayMetrics());
 		}
 
 		public static float getLineThickness(Context context) {
-			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-					DEFAULT_LINE_THICKNESS, context.getResources()
-							.getDisplayMetrics());
+			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_LINE_THICKNESS, context.getResources().getDisplayMetrics());
 		}
 
 	}
