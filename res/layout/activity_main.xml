@@ -34,14 +34,21 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Cancel" />
+            android:text="Exit" />
 
         <Button
             android:id="@+id/capture"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Capture" />
+            android:text="Click" />
+
+        <Button
+            android:id="@+id/edge"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Edge" />
 
         <Button
             android:id="@+id/crop"

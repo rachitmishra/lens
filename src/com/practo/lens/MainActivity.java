@@ -43,9 +43,13 @@ public class MainActivity extends Activity {
 
 	private Bitmap sourceBitmap, resultBitmap;
 
-	private Button crop, cancel, capture;
+	private Button crop, cancel, edge, capture;
 
 	private static final int REQUEST_IMAGE_CAPTURE = 1;
+
+	private List<Point> source = new ArrayList<Point>();
+
+	private ArrayList<CropView.Point> touchCorners, cornerPoints = new ArrayList<CropView.Point>();
 
 	private static final String TAG = "Tagged";
 
@@ -58,6 +62,7 @@ public class MainActivity extends Activity {
 		cropView = (CropView) findViewById(R.id.cropView);
 		crop = (Button) findViewById(R.id.crop);
 		cancel = (Button) findViewById(R.id.cancel);
+		edge = (Button) findViewById(R.id.edge);
 		capture = (Button) findViewById(R.id.capture);
 
 		cancel.setOnClickListener(new OnClickListener() {
@@ -69,11 +74,37 @@ public class MainActivity extends Activity {
 
 		});
 
+		edge.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View arg0) {
+
+				if (sourceBitmap == null) {
+					Log.e(TAG, "Source bitmap is null.");
+				}
+
+				Utils.bitmapToMat(sourceBitmap, sourceMatrix);
+
+				detectCorners(sourceMatrix);
+
+				cropView.init(cornerPoints);
+
+				cropView.invalidate();
+
+			}
+
+		});
+		
 		crop.setOnClickListener(new OnClickListener() {
 
 			@Override
 			public void onClick(View arg0) {
-				crop();
+				resultMatrix = warp();
+				
+				Utils.matToBitmap(resultMatrix, resultBitmap);
+				
+				captureView.setImageBitmap(resultBitmap);
+				
 			}
 
 		});
@@ -83,9 +114,11 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View arg0) {
 
-				Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+				Intent takePictureIntent = new Intent(
+						MediaStore.ACTION_IMAGE_CAPTURE);
 				if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-					startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+					startActivityForResult(takePictureIntent,
+							REQUEST_IMAGE_CAPTURE);
 				}
 
 			}
@@ -94,15 +127,18 @@ public class MainActivity extends Activity {
 
 	}
 
-	public BaseLoaderCallback mOpenCVLoaderCallback = new BaseLoaderCallback(this) {
+	public BaseLoaderCallback mOpenCVLoaderCallback = new BaseLoaderCallback(
+			this) {
 
 		@Override
 		public void onManagerConnected(int status) {
 			switch (status) {
 			case LoaderCallbackInterface.SUCCESS:
 				Log.i(TAG, "OpenCV Manager connected.");
-				sourceBitmap = ((BitmapDrawable) captureView.getDrawable()).getBitmap();
-				sourceMatrix = new Mat(sourceBitmap.getHeight(), sourceBitmap.getWidth(), CvType.CV_8U, new Scalar(4));
+				sourceBitmap = ((BitmapDrawable) captureView.getDrawable())
+						.getBitmap();
+				sourceMatrix = new Mat(sourceBitmap.getHeight(),
+						sourceBitmap.getWidth(), CvType.CV_8U, new Scalar(4));
 				tempMatrix = sourceMatrix;
 				sourceBitmap = sourceBitmap.copy(Bitmap.Config.ARGB_8888, true);
 
@@ -130,28 +166,13 @@ public class MainActivity extends Activity {
 	protected void onResume() {
 		super.onResume();
 
-		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, mOpenCVLoaderCallback)) {
+		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this,
+				mOpenCVLoaderCallback)) {
 			Log.e(TAG, "Cannot connect to OpenCV Manager.");
 		}
 	}
 
-	private void crop() {
-
-		if (sourceBitmap == null)
-			Log.e(TAG, "Source bitmap is null.");
-
-		Utils.bitmapToMat(sourceBitmap, sourceMatrix);
-
-		resultMatrix = extractPage(sourceMatrix);
-
-		//resultBitmap = Bitmap.createBitmap(resultMatrix.width(), resultMatrix.height(), Bitmap.Config.ARGB_8888);
-
-		// Utils.matToBitmap(resultMatrix, resultBitmap);
-
-		// captureView.setBackground(new BitmapDrawable(getResources(), resultBitmap));
-	}
-
-	public Mat extractPage(Mat sourceMatrix) {
+	public Mat detectCorners(Mat sourceMatrix) {
 
 		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 
@@ -159,12 +180,14 @@ public class MainActivity extends Activity {
 
 		Imgproc.Canny(tempMatrix, tempMatrix, 50, 50);
 
-		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new org.opencv.core.Size(5, 5), 5);
+		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new org.opencv.core.Size(
+				5, 5), 5);
 
-		Imgproc.findContours(tempMatrix, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+		Imgproc.findContours(tempMatrix, contours, new Mat(),
+				Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
 		double bigContour = -1;
-		
+
 		int bigContourId = -1;
 
 		MatOfPoint tempContour = contours.get(0);
@@ -174,15 +197,17 @@ public class MainActivity extends Activity {
 		for (int idx = 0; idx < contours.size(); idx++) {
 			tempContour = contours.get(idx);
 			double contourArea = Imgproc.contourArea(tempContour);
-			
+
 			if (contourArea > bigContour) {
-			
-				MatOfPoint2f newCurveMatrix = new MatOfPoint2f(tempContour.toArray());
+
+				MatOfPoint2f newCurveMatrix = new MatOfPoint2f(
+						tempContour.toArray());
 				int contourSize = (int) tempContour.total();
 				MatOfPoint2f tempCurveMatrix = new MatOfPoint2f();
-				
-				Imgproc.approxPolyDP(newCurveMatrix, tempCurveMatrix, contourSize * 0.05, true);
-				
+
+				Imgproc.approxPolyDP(newCurveMatrix, tempCurveMatrix,
+						contourSize * 0.05, true);
+
 				if (tempCurveMatrix.total() == 4) {
 					bigContour = contourArea;
 					bigContourId = idx;
@@ -211,9 +236,6 @@ public class MainActivity extends Activity {
 		Point p4 = new Point(tempDouble[0], tempDouble[1]);
 		CropView.Point pD = cropView.new Point(tempDouble[0], tempDouble[1]);
 
-		List<Point> source = new ArrayList<Point>();
-		ArrayList<CropView.Point> cornerPoints = new ArrayList<CropView.Point>();
-
 		source.add(p1);
 		source.add(p2);
 		source.add(p3);
@@ -224,24 +246,45 @@ public class MainActivity extends Activity {
 		cornerPoints.add(pC);
 		cornerPoints.add(pD);
 
-		cropView.init(cornerPoints);
-		cropView.invalidate();
-
-		//Mat startMatrix = Converters.vector_Point2f_to_Mat(source);
-		//Mat resultMatrix = warp(sourceMatrix, startMatrix);
 		return null;
 	}
+	
+	public Mat warp() {
+		
+		if(cropView!=null){
+			touchCorners = cropView.getTouchCorners();
+		}
+		
+		Point p1 = new Point(touchCorners.get(0).getX(), touchCorners.get(0).getY());
 
-	private Mat warp(Mat inputMatrix, Mat startMatrix) {
-		int resultWidth = 1000;
-		int resultHeight = 1000;
+		Point p2 = new Point(touchCorners.get(1).getX(), touchCorners.get(1).getY());
 
-		Mat outputMatrix = new Mat(resultWidth, resultHeight, CvType.CV_8UC4);
+		Point p3 = new Point(touchCorners.get(2).getX(), touchCorners.get(2).getY());
 
-		Point ocvPOut1 = new Point(0, 0);
-		Point ocvPOut2 = new Point(0, resultHeight);
-		Point ocvPOut3 = new Point(resultWidth, resultHeight);
-		Point ocvPOut4 = new Point(resultWidth, 0);
+		Point p4 = new Point(touchCorners.get(3).getX(), touchCorners.get(3).getY());
+		
+		source.add(p1);
+		source.add(p2);
+		source.add(p3);
+		source.add(p4);
+		
+		Mat startMatrix = Converters.vector_Point2f_to_Mat(source);
+		
+
+		
+		int height = (int) (touchCorners.get(1).getX() - touchCorners.get(0).getX());
+		
+		int width =  (int) (touchCorners.get(3).getY() - touchCorners.get(0).getY());
+		
+		Mat outputMatrix = new Mat(width, height, CvType.CV_8UC4);
+
+		Point ocvPOut1 = new Point(touchCorners.get(0).getX(), touchCorners.get(0).getY());
+		Point ocvPOut2 = new Point(touchCorners.get(0).getX(), height);
+		Point ocvPOut3 = new Point(width, height);
+		Point ocvPOut4 = new Point(width, touchCorners.get(0).getX());
+		
+		
+		resultBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
 		List<Point> dest = new ArrayList<Point>();
 
@@ -254,7 +297,9 @@ public class MainActivity extends Activity {
 
 		Mat perspectiveTransform = Imgproc.getPerspectiveTransform(startMatrix, endMatrix);
 
-		Imgproc.warpPerspective(inputMatrix, outputMatrix, perspectiveTransform, new Size(resultWidth, resultHeight), Imgproc.INTER_CUBIC);
+		Imgproc.warpPerspective(sourceMatrix, outputMatrix,
+				perspectiveTransform, new Size(width, height),
+				Imgproc.INTER_CUBIC);
 
 		return outputMatrix;
 	}
