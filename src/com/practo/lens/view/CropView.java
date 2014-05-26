@@ -754,6 +754,10 @@ public class CropView extends View {
 			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_CORNER_OFFSET, context.getResources()
 					.getDisplayMetrics());
 		}
+		
+		public static void log(String message) {
+			Log.i("Tagged", message);
+		}
 
 	}
 

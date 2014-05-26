@@ -40,6 +40,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.practo.lens.view.CropView;
+import com.practo.lens.view.CropView.Helper;
 import com.practo.lens.view.CropView.Pointer;
 
 public class Home extends Activity {
@@ -108,7 +109,7 @@ public class Home extends Activity {
 	private void setupUI() {
 		captureImageView = (ImageView) findViewById(R.id.imageView);
 		captureCropView = (CropView) findViewById(R.id.cropView);
-		//edgeCropView = (CropView) findViewById(R.id.edgeCropView);
+		// edgeCropView = (CropView) findViewById(R.id.edgeCropView);
 		edgeImageView = (ImageView) findViewById(R.id.edgeImageView);
 		cropImageView = (ImageView) findViewById(R.id.cropImageView);
 		crop = (Button) findViewById(R.id.crop);
@@ -136,10 +137,10 @@ public class Home extends Activity {
 
 				try {
 					getPicture();
-					
+
 					mWidthRatio = mWidth / captureImageView.getWidth();
 					mHeightRatio = mHeight / captureImageView.getHeight();
-					
+
 					sourceMatrix = new Mat(mHeight, mWidth, CvType.CV_8UC4);
 
 					Utils.bitmapToMat(sourceBitmap, sourceMatrix);
@@ -147,17 +148,17 @@ public class Home extends Activity {
 					doEdgeDetect(sourceMatrix);
 
 					captureCropView.setCornerHandles(detectedCropCorners);
-					
+
 					captureCropView.invalidate();
-					
+
 				} catch (Exception e) {
-					
+
 					if (sourceBitmap == null) {
 						Toast.makeText(Home.this, "Please select or click a picture !", Toast.LENGTH_SHORT).show();
 					} else {
 						Toast.makeText(Home.this, "Whoa ! Lens crashed !", Toast.LENGTH_SHORT).show();
 					}
-					
+
 					e.printStackTrace();
 				}
 
@@ -184,8 +185,7 @@ public class Home extends Activity {
 
 					Utils.matToBitmap(resultMatrix, resultBitmap);
 
-					Log.w(TAG,
-							"Output bitmap width " + resultBitmap.getWidth() + " & height " + resultBitmap.getHeight());
+					Log.w(TAG, "Output bitmap width " + resultBitmap.getWidth() + " & height " + resultBitmap.getHeight());
 
 					captureImageView.setImageBitmap(resultBitmap);
 
@@ -195,7 +195,7 @@ public class Home extends Activity {
 					} else {
 						Toast.makeText(Home.this, "Whoa ! Lens crashed !", Toast.LENGTH_SHORT).show();
 					}
-					
+
 					e.printStackTrace();
 
 				}
@@ -230,8 +230,7 @@ public class Home extends Activity {
 
 			@Override
 			public void onClick(View arg0) {
-				Intent selectPictureIntent = new Intent(Intent.ACTION_PICK,
-						android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+				Intent selectPictureIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
 				if (selectPictureIntent.resolveActivity(getPackageManager()) != null) {
 
@@ -343,7 +342,7 @@ public class Home extends Activity {
 	protected void onResume() {
 		super.onResume();
 
-		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mOpenCVLoaderCallback)) {
+		if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_8, this, mOpenCVLoaderCallback)) {
 			Log.e(TAG, "Cannot connect to OpenCV Manager.");
 		}
 	}
@@ -387,16 +386,16 @@ public class Home extends Activity {
 		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_GRAY2BGR);
 
 		double[] tempDouble = approxCurveMatrix.get(0, 0);
-		Pointer pA = captureCropView.new Pointer(tempDouble[0]/mWidthRatio, tempDouble[1]/mHeightRatio);
+		Pointer pA = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
 
 		tempDouble = approxCurveMatrix.get(1, 0);
-		Pointer pB = captureCropView.new Pointer(tempDouble[0]/mWidthRatio, tempDouble[1]/mHeightRatio);
+		Pointer pB = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
 
 		tempDouble = approxCurveMatrix.get(2, 0);
-		Pointer pC = captureCropView.new Pointer(tempDouble[0]/mWidthRatio, tempDouble[1]/mHeightRatio);
+		Pointer pC = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
 
 		tempDouble = approxCurveMatrix.get(3, 0);
-		Pointer pD = captureCropView.new Pointer(tempDouble[0]/mWidthRatio, tempDouble[1]/mHeightRatio);
+		Pointer pD = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
 
 		detectedCropCorners.add(pA);
 		detectedCropCorners.add(pB);
@@ -405,9 +404,7 @@ public class Home extends Activity {
 
 		return tempMatrix;
 	}
-	
 
-	
 	public Mat doPerspectiveCrop(Mat sourceMatrix) {
 
 		if (captureCropView != null) {
@@ -416,14 +413,10 @@ public class Home extends Activity {
 
 		List<Point> inputMatrixPoints = new ArrayList<Point>();
 
-		Point iPointTopLeft = new Point(Math.round((cropCorners.get(0).getX() * mWidthRatio)), Math.round((cropCorners
-				.get(0).getY() * mHeightRatio)));
-		Point iPointTopRight = new Point(Math.round((cropCorners.get(1).getX() * mWidthRatio)), Math.round((cropCorners
-				.get(1).getY() * mHeightRatio)));
-		Point iPointBottomRight = new Point(Math.round((cropCorners.get(2).getX() * mWidthRatio)),
-				Math.round((cropCorners.get(2).getY() * mHeightRatio)));
-		Point iPointBottomLeft = new Point(Math.round((cropCorners.get(3).getX() * mWidthRatio)),
-				Math.round((cropCorners.get(3).getY() * mHeightRatio)));
+		Point iPointTopLeft = new Point((cropCorners.get(0).getX() * mWidthRatio), (cropCorners.get(0).getY() * mHeightRatio));
+		Point iPointTopRight = new Point((cropCorners.get(1).getX() * mWidthRatio), (cropCorners.get(1).getY() * mHeightRatio));
+		Point iPointBottomRight = new Point((cropCorners.get(2).getX() * mWidthRatio), (cropCorners.get(2).getY() * mHeightRatio));
+		Point iPointBottomLeft = new Point((cropCorners.get(3).getX() * mWidthRatio), (cropCorners.get(3).getY() * mHeightRatio));
 
 		inputMatrixPoints.add(iPointTopLeft);
 		inputMatrixPoints.add(iPointTopRight);
@@ -434,13 +427,16 @@ public class Home extends Activity {
 
 		Mat inputMatrix = Converters.vector_Point2f_to_Mat(inputMatrixPoints);
 
-		double widthTop =cropCorners.get(0).getDistance(cropCorners.get(1)) * mHeightRatio;
-		double widthBottom = cropCorners.get(2).getDistance(cropCorners.get(3)) * mHeightRatio;
-		double maxWidth = (widthTop > widthBottom) ? widthTop : widthBottom;
+		double widthTop = cropCorners.get(0).getDistance(cropCorners.get(1));
+		double widthBottom = cropCorners.get(2).getDistance(cropCorners.get(3));
+		int maxWidth = (int) (((widthTop > widthBottom) ? widthTop : widthBottom) * mWidthRatio);
 
-		double heightLeft = cropCorners.get(0).getDistance(cropCorners.get(3)) * mHeightRatio;
-		double heightRight = cropCorners.get(1).getDistance(cropCorners.get(2)) * mHeightRatio;
-		double maxHeight = (heightLeft > heightRight) ? heightLeft : heightRight;
+		double heightLeft = cropCorners.get(0).getDistance(cropCorners.get(3));
+		double heightRight = cropCorners.get(1).getDistance(cropCorners.get(2));
+		int maxHeight = (int) (((heightLeft > heightRight) ? heightLeft : heightRight) * mHeightRatio);
+		
+		Helper.log("Height ratio " + mHeightRatio + " Width ratio " + mWidthRatio);
+		Helper.log("Max height " + maxHeight + " Max width " + maxWidth);
 
 		resultBitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888);
 
@@ -449,9 +445,9 @@ public class Home extends Activity {
 		List<Point> outputMatrixPoints = new ArrayList<Point>();
 
 		Point oPointTopLeft = new Point(0, 0);
-		Point oPointTopRight = new Point(maxWidth, 0);
-		Point oPointBottomRight = new Point(maxWidth, maxHeight);
-		Point oPointBottomLeft = new Point(0, maxHeight);
+		Point oPointTopRight = new Point(resultMatrix.cols(), 0);
+		Point oPointBottomRight = new Point(resultMatrix.cols(), resultMatrix.rows());
+		Point oPointBottomLeft = new Point(0, resultMatrix.rows());
 
 		outputMatrixPoints.add(oPointTopLeft);
 		outputMatrixPoints.add(oPointTopRight);
@@ -465,20 +461,18 @@ public class Home extends Activity {
 
 		Mat transformationMatrix = Imgproc.getPerspectiveTransform(inputMatrix, outputMatrix);
 
-		Imgproc.warpPerspective(sourceMatrix, resultMatrix, transformationMatrix, new Size(maxWidth, maxHeight),
-				Imgproc.INTER_LANCZOS4);
-		
-		
-		//return sharpen(resultMatrix);
-		
+		Imgproc.warpPerspective(sourceMatrix, resultMatrix, transformationMatrix, resultMatrix.size());
+
+		// return sharpen(resultMatrix);
+
 		return resultMatrix;
 	}
-	
-	public Mat sharpen(Mat tempMatrix){
-		Mat outputMatrix = new Mat(tempMatrix.rows(),tempMatrix.cols(),tempMatrix.type());
-        Imgproc.GaussianBlur(tempMatrix, tempMatrix, new Size(0,0), 10);
-        Core.addWeighted(tempMatrix, 1.5, tempMatrix, -0.5, 0, outputMatrix);
-        return tempMatrix;
+
+	public Mat sharpen(Mat tempMatrix) {
+		Mat outputMatrix = new Mat(tempMatrix.rows(), tempMatrix.cols(), tempMatrix.type());
+		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new Size(0, 0), 10);
+		Core.addWeighted(tempMatrix, 1.5, tempMatrix, -0.5, 0, outputMatrix);
+		return tempMatrix;
 	}
 
 }
