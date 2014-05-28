@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -45,7 +44,7 @@ import com.practo.lens.view.CropView.Pointer;
 
 public class Home extends Activity {
 
-	private CropView captureCropView;
+	private CropView captureCropView, edgeCropView;
 
 	private ImageView captureImageView;
 
@@ -70,6 +69,8 @@ public class Home extends Activity {
 	private static final String TAG = "Tagged";
 
 	private double mDefaultAspectRatio, mWidthRatio, mHeightRatio;
+
+	private double mIntrinsicOffset;
 
 	private int mHeight;
 
@@ -109,12 +110,12 @@ public class Home extends Activity {
 	private void setupUI() {
 		captureImageView = (ImageView) findViewById(R.id.imageView);
 		captureCropView = (CropView) findViewById(R.id.cropView);
-		// edgeCropView = (CropView) findViewById(R.id.edgeCropView);
+		edgeCropView = (CropView) findViewById(R.id.edgeCropView);
 		edgeImageView = (ImageView) findViewById(R.id.edgeImageView);
 		cropImageView = (ImageView) findViewById(R.id.cropImageView);
 		crop = (Button) findViewById(R.id.crop);
 		cancel = (Button) findViewById(R.id.cancel);
-		edge = (Button) findViewById(R.id.edge);
+		//edge = (Button) findViewById(R.id.edge);
 		capture = (Button) findViewById(R.id.capture);
 		select = (Button) findViewById(R.id.select);
 	}
@@ -130,41 +131,43 @@ public class Home extends Activity {
 
 		});
 
-		edge.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-
-				try {
-					getPicture();
-
-					mWidthRatio = mWidth / captureImageView.getWidth();
-					mHeightRatio = mHeight / captureImageView.getHeight();
-
-					sourceMatrix = new Mat(mHeight, mWidth, CvType.CV_8UC4);
-
-					Utils.bitmapToMat(sourceBitmap, sourceMatrix);
-
-					doEdgeDetect(sourceMatrix);
-
-					captureCropView.setCornerHandles(detectedCropCorners);
-
-					captureCropView.invalidate();
-
-				} catch (Exception e) {
-
-					if (sourceBitmap == null) {
-						Toast.makeText(Home.this, "Please select or click a picture !", Toast.LENGTH_SHORT).show();
-					} else {
-						Toast.makeText(Home.this, "Whoa ! Lens crashed !", Toast.LENGTH_SHORT).show();
-					}
-
-					e.printStackTrace();
-				}
-
-			}
-
-		});
+//		edge.setOnClickListener(new OnClickListener() {
+//
+//			@Override
+//			public void onClick(View arg0) {
+//
+//				try {
+//					getPicture();
+//
+//					mWidthRatio = mWidth / captureImageView.getWidth();
+//					mHeightRatio = mHeight / captureImageView.getHeight();
+//
+//					sourceMatrix = new Mat(mHeight, mWidth, CvType.CV_8UC4);
+//
+//					Utils.bitmapToMat(sourceBitmap, sourceMatrix);
+//
+//					// doEdgeDetect(sourceMatrix);
+//
+//					edgeImageView.setImageBitmap(sourceBitmap);
+//
+//					edgeCropView.setCornerHandles(detectedCropCorners);
+//
+//					edgeCropView.invalidate();
+//
+//				} catch (Exception e) {
+//
+//					if (sourceBitmap == null) {
+//						Toast.makeText(Home.this, "Please select or click a picture !", Toast.LENGTH_SHORT).show();
+//					} else {
+//						Toast.makeText(Home.this, "Whoa ! Lens crashed !", Toast.LENGTH_SHORT).show();
+//					}
+//
+//					e.printStackTrace();
+//				}
+//
+//			}
+//
+//		});
 
 		crop.setOnClickListener(new OnClickListener() {
 
@@ -185,9 +188,11 @@ public class Home extends Activity {
 
 					Utils.matToBitmap(resultMatrix, resultBitmap);
 
-					Log.w(TAG, "Output bitmap width " + resultBitmap.getWidth() + " & height " + resultBitmap.getHeight());
+					Helper.log("Output bitmap width " + mWidth + " & height " + mHeight);
+					Helper.log("Capture imageview width " + captureImageView.getWidth() + " & height " + captureImageView.getHeight());
+					Helper.log("Ratio width " + mWidthRatio + " & height " + mHeightRatio);
 
-					captureImageView.setImageBitmap(resultBitmap);
+					cropImageView.setImageBitmap(resultBitmap);
 
 				} catch (Exception e) {
 					if (sourceBitmap == null) {
@@ -230,6 +235,8 @@ public class Home extends Activity {
 
 			@Override
 			public void onClick(View arg0) {
+				captureCropView.setVisibility(View.VISIBLE);
+				captureCropView.init();
 				Intent selectPictureIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
 				if (selectPictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -278,7 +285,8 @@ public class Home extends Activity {
 	}
 
 	private void setPicture(int requestCode, Intent data) {
-
+		captureCropView.setVisibility(View.VISIBLE);
+		captureCropView.init();
 		int layoutWidth = captureImageView.getWidth();
 		int layoutHeight = captureImageView.getHeight();
 
@@ -305,7 +313,6 @@ public class Home extends Activity {
 
 			bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
 			captureImageView.setImageBitmap(bitmap);
-			edgeImageView.setImageBitmap(bitmap);
 			break;
 		case REQUEST_IMAGE_SELECT:
 			Uri selectedImage = data.getData();
@@ -329,7 +336,6 @@ public class Home extends Activity {
 			cursor.close();
 			bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
 			captureImageView.setImageBitmap(bitmap);
-			edgeImageView.setImageBitmap(bitmap);
 			break;
 
 		default:
@@ -347,62 +353,90 @@ public class Home extends Activity {
 		}
 	}
 
-	public Mat doEdgeDetect(Mat tempMatrix) {
+	// public Mat doEdgeDetect(Mat tempMatrix) {
+	//
+	// List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+	//
+	// Mat lineMatrix = new Mat();
+	//
+	// resultBitmap = Bitmap.createBitmap(mWidth, mHeight,
+	// Bitmap.Config.ARGB_8888);
+	//
+	// Imgproc.medianBlur(tempMatrix, tempMatrix, 3);
+	//
+	// Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
+	//
+	// Imgproc.Canny(tempMatrix, tempMatrix, 200, 200);
+	//
+	// Imgproc.dilate(tempMatrix, tempMatrix, new Mat(), new Point(-1, -1), 1);
+	//
+	// Utils.matToBitmap(tempMatrix, resultBitmap);
+	//
+	// cropImageView.setImageBitmap(resultBitmap);
+	//
+	// //Imgproc.filter2D(tempMatrix, tempMatrix, CvType.CV_8U, tempMatrix.t());
+	//
+	// // Imgproc.HoughLinesP(tempMatrix, lineMatrix, 1, Math.PI / 180, 200,
+	// // 50, 20);
+	//
+	// Log.w("Tagged", "" + lineMatrix.size());
+	//
+	// Imgproc.findContours(tempMatrix, contours, new Mat(), Imgproc.RETR_LIST,
+	// Imgproc.CHAIN_APPROX_SIMPLE);
+	//
+	// double bigContour = -1;
+	//
+	// MatOfPoint tempContour = contours.get(0);
+	// MatOfPoint2f approxCurveMatrix = new MatOfPoint2f();
+	//
+	// for (int idx = 0; idx < contours.size(); idx++) {
+	//
+	//
+	// tempContour = contours.get(idx);
+	// double contourArea = Imgproc.contourArea(tempContour);
+	//
+	// if (contourArea > bigContour) {
+	//
+	// MatOfPoint2f newCurveMatrix = new MatOfPoint2f(tempContour.toArray());
+	// int contourSize = (int) tempContour.total();
+	// MatOfPoint2f tempCurveMatrix = new MatOfPoint2f();
+	//
+	// Imgproc.approxPolyDP(newCurveMatrix, tempCurveMatrix, contourSize * 0.05,
+	// true);
+	// if (tempCurveMatrix.total() == 4) {
+	// bigContour = contourArea;
+	// approxCurveMatrix = tempCurveMatrix;
+	// }
+	// }
+	// }
+	//
+	// double[] tempDouble = approxCurveMatrix.get(0, 0);
+	// Pointer pA = captureCropView.new Pointer(tempDouble[0] / mWidthRatio,
+	// tempDouble[1] / mHeightRatio);
+	//
+	// tempDouble = approxCurveMatrix.get(1, 0);
+	// Pointer pB = captureCropView.new Pointer(tempDouble[0] / mWidthRatio,
+	// tempDouble[1] / mHeightRatio);
+	//
+	// tempDouble = approxCurveMatrix.get(2, 0);
+	// Pointer pC = captureCropView.new Pointer(tempDouble[0] / mWidthRatio,
+	// tempDouble[1] / mHeightRatio);
+	//
+	// tempDouble = approxCurveMatrix.get(3, 0);
+	// Pointer pD = captureCropView.new Pointer(tempDouble[0] / mWidthRatio,
+	// tempDouble[1] / mHeightRatio);
+	//
+	// detectedCropCorners.add(pA);
+	// detectedCropCorners.add(pB);
+	// detectedCropCorners.add(pC);
+	// detectedCropCorners.add(pD);
+	//
+	// return null;
+	// }
 
-		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-
+	public void computeSkew(Mat tempMatrix) {
 		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
-
-		Imgproc.Canny(tempMatrix, tempMatrix, 50, 50);
-
-		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new org.opencv.core.Size(5, 5), 5);
-
-		Imgproc.findContours(tempMatrix, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-		double bigContour = -1;
-
-		MatOfPoint tempContour = contours.get(0);
-		MatOfPoint2f approxCurveMatrix = new MatOfPoint2f();
-
-		for (int idx = 0; idx < contours.size(); idx++) {
-			tempContour = contours.get(idx);
-			double contourArea = Imgproc.contourArea(tempContour);
-
-			if (contourArea > bigContour) {
-
-				MatOfPoint2f newCurveMatrix = new MatOfPoint2f(tempContour.toArray());
-				int contourSize = (int) tempContour.total();
-				MatOfPoint2f tempCurveMatrix = new MatOfPoint2f();
-
-				Imgproc.approxPolyDP(newCurveMatrix, tempCurveMatrix, contourSize * 0.05, true);
-
-				if (tempCurveMatrix.total() == 4) {
-					bigContour = contourArea;
-					approxCurveMatrix = tempCurveMatrix;
-				}
-			}
-		}
-
-		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_GRAY2BGR);
-
-		double[] tempDouble = approxCurveMatrix.get(0, 0);
-		Pointer pA = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
-
-		tempDouble = approxCurveMatrix.get(1, 0);
-		Pointer pB = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
-
-		tempDouble = approxCurveMatrix.get(2, 0);
-		Pointer pC = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
-
-		tempDouble = approxCurveMatrix.get(3, 0);
-		Pointer pD = captureCropView.new Pointer(tempDouble[0] / mWidthRatio, tempDouble[1] / mHeightRatio);
-
-		detectedCropCorners.add(pA);
-		detectedCropCorners.add(pB);
-		detectedCropCorners.add(pC);
-		detectedCropCorners.add(pD);
-
-		return tempMatrix;
+		Core.bitwise_not(tempMatrix, tempMatrix);
 	}
 
 	public Mat doPerspectiveCrop(Mat sourceMatrix) {
@@ -413,10 +447,13 @@ public class Home extends Activity {
 
 		List<Point> inputMatrixPoints = new ArrayList<Point>();
 
-		Point iPointTopLeft = new Point((cropCorners.get(0).getX() * mWidthRatio), (cropCorners.get(0).getY() * mHeightRatio));
-		Point iPointTopRight = new Point((cropCorners.get(1).getX() * mWidthRatio), (cropCorners.get(1).getY() * mHeightRatio));
-		Point iPointBottomRight = new Point((cropCorners.get(2).getX() * mWidthRatio), (cropCorners.get(2).getY() * mHeightRatio));
-		Point iPointBottomLeft = new Point((cropCorners.get(3).getX() * mWidthRatio), (cropCorners.get(3).getY() * mHeightRatio));
+		mIntrinsicOffset = 8;
+		Point iPointTopLeft = new Point((cropCorners.get(0).getX() - mIntrinsicOffset), (cropCorners.get(0).getY() * (mHeightRatio * 1.1)));
+		Point iPointTopRight = new Point(((cropCorners.get(1).getX() - mIntrinsicOffset) * (mWidthRatio * 1.16)),
+				(cropCorners.get(1).getY() * (mHeightRatio * 1.1)));
+		Point iPointBottomRight = new Point(((cropCorners.get(2).getX() - mIntrinsicOffset) * (mWidthRatio * 1.16)),
+				(cropCorners.get(2).getY() * (mHeightRatio)));
+		Point iPointBottomLeft = new Point((cropCorners.get(3).getX() - mIntrinsicOffset), (cropCorners.get(3).getY() * (mHeightRatio)));
 
 		inputMatrixPoints.add(iPointTopLeft);
 		inputMatrixPoints.add(iPointTopRight);
@@ -429,18 +466,15 @@ public class Home extends Activity {
 
 		double widthTop = cropCorners.get(0).getDistance(cropCorners.get(1));
 		double widthBottom = cropCorners.get(2).getDistance(cropCorners.get(3));
-		int maxWidth = (int) (((widthTop > widthBottom) ? widthTop : widthBottom) * mWidthRatio);
+		int maxWidth = (int) (((widthTop > widthBottom) ? widthTop : widthBottom));
 
 		double heightLeft = cropCorners.get(0).getDistance(cropCorners.get(3));
 		double heightRight = cropCorners.get(1).getDistance(cropCorners.get(2));
-		int maxHeight = (int) (((heightLeft > heightRight) ? heightLeft : heightRight) * mHeightRatio);
-		
-		Helper.log("Height ratio " + mHeightRatio + " Width ratio " + mWidthRatio);
-		Helper.log("Max height " + maxHeight + " Max width " + maxWidth);
+		int maxHeight = (int) (((heightLeft > heightRight) ? heightLeft : heightRight));
 
 		resultBitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888);
 
-		Mat resultMatrix = new Mat(maxHeight, maxWidth, CvType.CV_8UC4);
+		Mat resultMatrix = new Mat(maxHeight, maxWidth, CvType.CV_8UC3);
 
 		List<Point> outputMatrixPoints = new ArrayList<Point>();
 
@@ -454,24 +488,33 @@ public class Home extends Activity {
 		outputMatrixPoints.add(oPointBottomRight);
 		outputMatrixPoints.add(oPointBottomLeft);
 
-		Log.w(TAG, "Output points " + outputMatrixPoints.toString());
-		Log.w(TAG, "Output width " + maxWidth + " & height " + maxHeight);
+		Helper.log("Output points " + outputMatrixPoints.toString());
+		Helper.log("Output width " + maxWidth + " & height " + maxHeight);
 
 		Mat outputMatrix = Converters.vector_Point2f_to_Mat(outputMatrixPoints);
 
 		Mat transformationMatrix = Imgproc.getPerspectiveTransform(inputMatrix, outputMatrix);
 
-		Imgproc.warpPerspective(sourceMatrix, resultMatrix, transformationMatrix, resultMatrix.size());
+		Imgproc.warpPerspective(sourceMatrix, resultMatrix, transformationMatrix, resultMatrix.size(), Imgproc.INTER_BITS2);
 
-		// return sharpen(resultMatrix);
-
-		return resultMatrix;
+		return brighten(resultMatrix);
 	}
 
 	public Mat sharpen(Mat tempMatrix) {
-		Mat outputMatrix = new Mat(tempMatrix.rows(), tempMatrix.cols(), tempMatrix.type());
-		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new Size(0, 0), 10);
-		Core.addWeighted(tempMatrix, 1.5, tempMatrix, -0.5, 0, outputMatrix);
+		Imgproc.GaussianBlur(tempMatrix, tempMatrix, new Size(0, 0), 3);
+		Core.addWeighted(tempMatrix, 1.5, tempMatrix, -0.5, 0, tempMatrix);
+		return tempMatrix;
+	}
+
+	public Mat equalize(Mat tempMatrix) {
+		Imgproc.equalizeHist(tempMatrix, tempMatrix);
+		return tempMatrix;
+	}
+
+	public Mat brighten(Mat tempMatrix) {
+		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
+		Imgproc.equalizeHist(tempMatrix, tempMatrix);
+		tempMatrix.convertTo(tempMatrix, -1, 1.5, 40);
 		return tempMatrix;
 	}
 

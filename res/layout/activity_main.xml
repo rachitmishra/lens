@@ -19,6 +19,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:scaleType="fitCenter"
                 android:src="@drawable/ic_launcher" />
 
             <com.practo.lens.view.CropView
@@ -33,13 +34,13 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:visibility="gone" >
+            android:orientation="vertical" >
 
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1" >
+                android:layout_weight="1"
+                android:visibility="gone" >
 
                 <ImageView
                     android:id="@+id/edgeImageView"
@@ -63,8 +64,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:src="@drawable/ic_launcher"
-                android:visibility="gone" />
+                android:src="@drawable/ic_launcher" />
 
         </LinearLayout>
     </LinearLayout>
@@ -93,13 +93,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Select" />
-
+	<!--  
         <Button
             android:id="@+id/edge"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Edge" />
+            android:text="Edge" />-->
 
         <Button
             android:id="@+id/crop"
