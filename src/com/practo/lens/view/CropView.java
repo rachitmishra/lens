@@ -39,10 +39,10 @@ public class CropView extends View {
 	private double mDefaultCornerHandleOffset;
 
 	// Current corner handle
-	private Pointer mCornerHandle;
+	private Poynt mCornerHandle;
 
 	// Current corner handle
-	private Pointer mCenterHandle;
+	private Poynt mCenterHandle;
 
 	// Current corner handle index
 	private int mCornerHandleIndex;
@@ -66,7 +66,10 @@ public class CropView extends View {
 	private double mHeight;
 
 	// List to hold the corner handles
-	private List<Pointer> cornerHandles = new ArrayList<Pointer>();
+	private List<Poynt> corners = new ArrayList<Poynt>();
+	
+	// List to hold the corner handles
+	private List<Lyne> edges = new ArrayList<Lyne>();
 
 	/**
 	 * Default constructor
@@ -99,12 +102,13 @@ public class CropView extends View {
 		mDefaultCornerHandleOffset = Helper.getCornerOffset(context);
 		mHeight = getHeight();
 		mWidth = getWidth();
-		cornerHandles.clear();
-		cornerHandles.add(new Pointer(mDefaultCornerHandleOffset, mDefaultCornerHandleOffset));
-		cornerHandles.add(new Pointer(mWidth - mDefaultCornerHandleOffset, mDefaultCornerHandleOffset));
-		cornerHandles.add(new Pointer(mWidth - mDefaultCornerHandleOffset, mHeight - mDefaultCornerHandleOffset));
-		cornerHandles.add(new Pointer(mDefaultCornerHandleOffset, mHeight - mDefaultCornerHandleOffset));
-		setCornerHandles();
+		corners.clear();
+		corners.add(new Poynt(mDefaultCornerHandleOffset, mDefaultCornerHandleOffset));
+		corners.add(new Poynt(mWidth - mDefaultCornerHandleOffset, mDefaultCornerHandleOffset));
+		corners.add(new Poynt(mWidth - mDefaultCornerHandleOffset, mHeight - mDefaultCornerHandleOffset));
+		corners.add(new Poynt(mDefaultCornerHandleOffset, mHeight - mDefaultCornerHandleOffset));
+		setCorners();
+		setEdges();
 	}
 
 	/**
@@ -112,13 +116,13 @@ public class CropView extends View {
 	 * 
 	 * @param corners
 	 */
-	public void setCornerHandles(List<Pointer> corners) {
+	public void setCornerHandles(List<Poynt> corners) {
 
-		cornerHandles.clear();
+		corners.clear();
 		sortPoints(corners);
-		cornerHandles = corners;
-		setCornerHandles();
-
+		this.corners = corners;
+		setCorners();
+		setEdges();
 		Log.w("Tagged", "Corners detected " + corners.toString());
 	}
 
@@ -128,52 +132,68 @@ public class CropView extends View {
 	 * @param corners
 	 * @return
 	 */
-	public List<Pointer> sortPoints(List<Pointer> corners) {
+	public List<Poynt> sortPoints(List<Poynt> corners) {
 
-		List<Pointer> top = new ArrayList<Pointer>(), bottom = new ArrayList<Pointer>();
+		List<Poynt> top = new ArrayList<Poynt>(), bottom = new ArrayList<Poynt>();
 		double cX = 0, cY = 0;
 
-		for (Pointer pointer : corners) {
+		for (Poynt pointer : corners) {
 			cX += pointer.getX();
 			cY += pointer.getY();
 		}
 
-		Pointer cPoint = new Pointer(cX / corners.size(), cY / corners.size());
+		Poynt cPoint = new Poynt(cX / corners.size(), cY / corners.size());
 
-		for (Pointer pointer : corners) {
+		for (Poynt pointer : corners) {
 			if (pointer.getY() < cPoint.getY())
 				top.add(pointer);
 			else
 				bottom.add(pointer);
 		}
 
-		Pointer tl = top.get(0).getX() > top.get(1).getX() ? top.get(1) : top.get(0);
-		Pointer tr = top.get(0).getX() > top.get(1).getX() ? top.get(0) : top.get(1);
-		Pointer bl = bottom.get(0).getX() > bottom.get(1).getX() ? bottom.get(1) : bottom.get(0);
-		Pointer br = bottom.get(0).getX() > bottom.get(1).getX() ? bottom.get(0) : bottom.get(1);
+		Poynt topLeft = top.get(0).getX() > top.get(1).getX() ? top.get(1) : top.get(0);
+		Poynt topRight = top.get(0).getX() > top.get(1).getX() ? top.get(0) : top.get(1);
+		Poynt bottomLeft = bottom.get(0).getX() > bottom.get(1).getX() ? bottom.get(1) : bottom.get(0);
+		Poynt bottomRight = bottom.get(0).getX() > bottom.get(1).getX() ? bottom.get(0) : bottom.get(1);
 
 		corners.clear();
 
-		corners.add(tl);
-		corners.add(tr);
-		corners.add(br);
-		corners.add(bl);
+		corners.add(topLeft);
+		corners.add(topRight);
+		corners.add(bottomRight);
+		corners.add(bottomLeft);
 		return corners;
 	}
 
 	/**
 	 * Initialize touch corners .
 	 */
-	public void setCornerHandles() {
+	public void setCorners() {
 
-		if (cornerHandles.isEmpty()) {
+		if (corners.isEmpty()) {
 			return;
 		}
 
-		cornerHandles.get(CORNER_ONE).setNext(cornerHandles.get(CORNER_TWO));
-		cornerHandles.get(CORNER_TWO).setNext(cornerHandles.get(CORNER_THREE));
-		cornerHandles.get(CORNER_THREE).setNext(cornerHandles.get(CORNER_FOUR));
-		cornerHandles.get(CORNER_FOUR).setNext(cornerHandles.get(CORNER_ONE));
+		corners.get(CORNER_ONE).setNext(corners.get(CORNER_TWO));
+		corners.get(CORNER_TWO).setNext(corners.get(CORNER_THREE));
+		corners.get(CORNER_THREE).setNext(corners.get(CORNER_FOUR));
+		corners.get(CORNER_FOUR).setNext(corners.get(CORNER_ONE));
+	}
+	
+	public void setEdges(){
+		if (corners.isEmpty()) {
+			return;
+		}
+		
+		Lyne top = new Lyne(corners.get(CORNER_ONE),corners.get(CORNER_TWO));
+		Lyne right = new Lyne(corners.get(CORNER_TWO),corners.get(CORNER_THREE));
+		Lyne bottom =new Lyne(corners.get(CORNER_THREE),corners.get(CORNER_FOUR));
+		Lyne left = new Lyne(corners.get(CORNER_FOUR),corners.get(CORNER_ONE));
+		
+		edges.add(top);
+		edges.add(right);
+		edges.add(bottom);
+		edges.add(left);
 	}
 
 	/**
@@ -181,8 +201,17 @@ public class CropView extends View {
 	 * 
 	 * @return
 	 */
-	public List<Pointer> getCornerHandles() {
-		return cornerHandles;
+	public List<Poynt> getCorners() {
+		return corners;
+	}
+	
+	/**
+	 * Get border edges.
+	 * 
+	 * @return
+	 */
+	public List<Lyne> getEdges() {
+		return edges;
 	}
 
 	@Override
@@ -195,10 +224,10 @@ public class CropView extends View {
 			init = false;
 		}
 
-		updateCornerHandles(canvas);
-		updateCenterHandles(canvas);
+		updateCorners(canvas);
+		updateCenters(canvas);
 		// updateSnapView(canvas);
-		updateBorderLines(canvas);
+		updateEdges(canvas);
 		updateShaderBackground(canvas);
 	}
 
@@ -207,13 +236,13 @@ public class CropView extends View {
 	 * 
 	 * @param canvas
 	 */
-	private void updateCornerHandles(Canvas canvas) {
+	private void updateCorners(Canvas canvas) {
 
-		if (cornerHandles.isEmpty()) {
+		if (corners.isEmpty()) {
 			return;
 		}
 
-		for (Pointer point : cornerHandles) {
+		for (Poynt point : corners) {
 			canvas.drawCircle((float) (point.getX()), (float) (point.getY()), (float) mDefaultCornerHandleRadius * 2, Helper.getCornerPaint(context));
 			canvas.drawCircle((float) (point.getX()), (float) (point.getY()), (float) (mDefaultCornerHandleRadius * 0.5),
 					Helper.getCornerLightPaint(context));
@@ -225,13 +254,13 @@ public class CropView extends View {
 	 * 
 	 * @param canvas
 	 */
-	private void updateCenterHandles(Canvas canvas) {
+	private void updateCenters(Canvas canvas) {
 
-		if (cornerHandles.isEmpty()) {
+		if (corners.isEmpty()) {
 			return;
 		}
 
-		for (Pointer point : cornerHandles) {
+		for (Poynt point : corners) {
 			canvas.drawCircle((float) (point.getCenter(point.getNext()).getX()), (float) (point.getCenter(point.getNext()).getY()),
 					(float) (mDefaultCornerHandleRadius * 0.5), Helper.getCornerLightPaint(context));
 		}
@@ -260,7 +289,7 @@ public class CropView extends View {
 	 * @param canvas
 	 */
 	private void updateShaderBackground(Canvas canvas) {
-		if (cornerHandles.isEmpty()) {
+		if (corners.isEmpty()) {
 			return;
 		}
 
@@ -271,41 +300,41 @@ public class CropView extends View {
 		// top
 		linePath.moveTo(0, 0);
 		linePath.lineTo((float) mWidth, 0);
-		linePath.lineTo((float) mWidth, (float) (cornerHandles.get(CORNER_ONE).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) mWidth, (float) (cornerHandles.get(CORNER_TWO).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) cornerHandles.get(CORNER_TWO).getX(), (float) (cornerHandles.get(CORNER_TWO).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) cornerHandles.get(CORNER_ONE).getX(), (float) (cornerHandles.get(CORNER_ONE).getY() - mDefaultOffset / 4));
-		linePath.lineTo(0, (float) (cornerHandles.get(CORNER_ONE).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) mWidth, (float) (corners.get(CORNER_ONE).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) mWidth, (float) (corners.get(CORNER_TWO).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) corners.get(CORNER_TWO).getX(), (float) (corners.get(CORNER_TWO).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) corners.get(CORNER_ONE).getX(), (float) (corners.get(CORNER_ONE).getY() - mDefaultOffset / 4));
+		linePath.lineTo(0, (float) (corners.get(CORNER_ONE).getY() - mDefaultOffset / 4));
 		canvas.drawPath(linePath, paint);
 
 		// left
 		linePath.reset();
-		linePath.moveTo(0, (float) (cornerHandles.get(CORNER_ONE).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) (cornerHandles.get(CORNER_ONE).getX() - mDefaultOffset / 4),
-				(float) (cornerHandles.get(CORNER_ONE).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) (cornerHandles.get(CORNER_FOUR).getX() - mDefaultOffset / 4),
-				(float) (cornerHandles.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
-		linePath.lineTo(0, (float) (cornerHandles.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
+		linePath.moveTo(0, (float) (corners.get(CORNER_ONE).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) (corners.get(CORNER_ONE).getX() - mDefaultOffset / 4),
+				(float) (corners.get(CORNER_ONE).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) (corners.get(CORNER_FOUR).getX() - mDefaultOffset / 4),
+				(float) (corners.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
+		linePath.lineTo(0, (float) (corners.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
 		canvas.drawPath(linePath, paint);
 
 		// right
 		linePath.reset();
-		linePath.moveTo((float) (cornerHandles.get(CORNER_TWO).getX() + mDefaultOffset / 4),
-				(float) (cornerHandles.get(CORNER_TWO).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) mWidth, (float) (cornerHandles.get(CORNER_TWO).getY() - mDefaultOffset / 4));
-		linePath.lineTo((float) mWidth, (float) (cornerHandles.get(CORNER_THREE).getY() + mDefaultOffset / 4));
-		linePath.lineTo((float) (cornerHandles.get(CORNER_THREE).getX() + mDefaultOffset / 4),
-				(float) (cornerHandles.get(CORNER_THREE).getY() + mDefaultOffset / 4));
+		linePath.moveTo((float) (corners.get(CORNER_TWO).getX() + mDefaultOffset / 4),
+				(float) (corners.get(CORNER_TWO).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) mWidth, (float) (corners.get(CORNER_TWO).getY() - mDefaultOffset / 4));
+		linePath.lineTo((float) mWidth, (float) (corners.get(CORNER_THREE).getY() + mDefaultOffset / 4));
+		linePath.lineTo((float) (corners.get(CORNER_THREE).getX() + mDefaultOffset / 4),
+				(float) (corners.get(CORNER_THREE).getY() + mDefaultOffset / 4));
 		canvas.drawPath(linePath, paint);
 
 		// bottom
 		linePath.reset();
-		linePath.moveTo(0, (float) (cornerHandles.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
+		linePath.moveTo(0, (float) (corners.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
 		linePath.lineTo(0, (float) mHeight);
 		linePath.lineTo((float) mWidth, (float) mHeight);
-		linePath.lineTo((float) mWidth, (float) (cornerHandles.get(CORNER_THREE).getY() + mDefaultOffset / 4));
-		linePath.lineTo((float) cornerHandles.get(CORNER_THREE).getX(), (float) (cornerHandles.get(CORNER_THREE).getY() + mDefaultOffset / 4));
-		linePath.lineTo((float) cornerHandles.get(CORNER_FOUR).getX(), (float) (cornerHandles.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
+		linePath.lineTo((float) mWidth, (float) (corners.get(CORNER_THREE).getY() + mDefaultOffset / 4));
+		linePath.lineTo((float) corners.get(CORNER_THREE).getX(), (float) (corners.get(CORNER_THREE).getY() + mDefaultOffset / 4));
+		linePath.lineTo((float) corners.get(CORNER_FOUR).getX(), (float) (corners.get(CORNER_FOUR).getY() + mDefaultOffset / 4));
 		canvas.drawPath(linePath, paint);
 
 	}
@@ -315,25 +344,25 @@ public class CropView extends View {
 	 * 
 	 * @param canvas
 	 */
-	private void updateBorderLines(Canvas canvas) {
+	private void updateEdges(Canvas canvas) {
 
-		if (cornerHandles.isEmpty()) {
+		if (corners.isEmpty()) {
 			return;
 		}
 
 		Path linePath = new Path();
 
 		// top
-		linePath.moveTo((float) (cornerHandles.get(CORNER_ONE).getX()), (float) (cornerHandles.get(CORNER_ONE).getY()));
+		linePath.moveTo((float) (corners.get(CORNER_ONE).getX()), (float) (corners.get(CORNER_ONE).getY()));
 
 		// right
-		linePath.lineTo((float) (cornerHandles.get(CORNER_TWO).getX()), (float) (cornerHandles.get(CORNER_TWO).getY()));
+		linePath.lineTo((float) (corners.get(CORNER_TWO).getX()), (float) (corners.get(CORNER_TWO).getY()));
 
 		// bottom
-		linePath.lineTo((float) (cornerHandles.get(CORNER_THREE).getX()), (float) (cornerHandles.get(CORNER_THREE).getY()));
+		linePath.lineTo((float) (corners.get(CORNER_THREE).getX()), (float) (corners.get(CORNER_THREE).getY()));
 
 		// left
-		linePath.lineTo((float) (cornerHandles.get(CORNER_FOUR).getX()), (float) (cornerHandles.get(CORNER_FOUR).getY()));
+		linePath.lineTo((float) (corners.get(CORNER_FOUR).getX()), (float) (corners.get(CORNER_FOUR).getY()));
 
 		linePath.close();
 
@@ -359,12 +388,12 @@ public class CropView extends View {
 			return true;
 
 		case MotionEvent.ACTION_DOWN:
-			onTouchDown(new Pointer(event.getX(), event.getY()));
+			onTouchDown(new Poynt(event.getX(), event.getY()));
 			return true;
 
 		case MotionEvent.ACTION_MOVE:
 			for (int i = 0; i < event.getHistorySize(); i++) {
-				onTouchMove(new Pointer(event.getHistoricalX(i), event.getHistoricalY(i)));
+				onTouchMove(new Poynt(event.getHistoricalX(i), event.getHistoricalY(i)));
 			}
 			return true;
 
@@ -391,7 +420,7 @@ public class CropView extends View {
 	 * 
 	 * @param p
 	 */
-	private void onTouchDown(Pointer p) {
+	private void onTouchDown(Poynt p) {
 
 		mCornerHandle = getPressedCornerHandle(p);
 
@@ -408,11 +437,11 @@ public class CropView extends View {
 	 * @param p
 	 * @return
 	 */
-	private Pointer getPressedCornerHandle(Pointer p) {
+	private Poynt getPressedCornerHandle(Poynt p) {
 
-		Pointer currentTouchPoint = null;
+		Poynt currentTouchPoint = null;
 
-		for (Pointer c : cornerHandles) {
+		for (Poynt c : corners) {
 
 			double differenceSquare = Math.pow(p.getX() - c.getX(), 2) + Math.pow(p.getY() - c.getY(), 2);
 			double radiusSquare = Math.pow(mDefaultOffset * 5, 2);
@@ -431,7 +460,7 @@ public class CropView extends View {
 	 * 
 	 * @param p
 	 */
-	private void onTouchMove(Pointer p) {
+	private void onTouchMove(Poynt p) {
 
 		if (mCornerHandle == null)
 			return;
@@ -444,20 +473,20 @@ public class CropView extends View {
 	 * 
 	 * @param p
 	 */
-	private void updateCropWindow(Pointer p) {
+	private void updateCropWindow(Poynt p) {
 
 		if (isOverlapping(p) || isOutbound(p)) {
 			return;
 		}
 
-		if (cornerHandles.indexOf(mCornerHandle) == -1) {
+		if (corners.indexOf(mCornerHandle) == -1) {
 			return;
 		}
 
 		// updateSnapView()
 
-		mCornerHandleIndex = cornerHandles.indexOf(mCornerHandle);
-		cornerHandles.get(mCornerHandleIndex).setXY(p.getX(), p.getY());
+		mCornerHandleIndex = corners.indexOf(mCornerHandle);
+		corners.get(mCornerHandleIndex).setXY(p.getX(), p.getY());
 
 		invalidate();
 	}
@@ -468,8 +497,8 @@ public class CropView extends View {
 	 * @param p
 	 * @return
 	 */
-	private boolean isOverlapping(Pointer p) {
-		for (Pointer point : cornerHandles) {
+	private boolean isOverlapping(Poynt p) {
+		for (Poynt point : corners) {
 			if (p.getDistance(point) <= mDefaultOffset * 2) {
 				warn = true;
 				return true;
@@ -485,7 +514,7 @@ public class CropView extends View {
 	 * @param p
 	 * @return
 	 */
-	private boolean isOutbound(Pointer p) {
+	private boolean isOutbound(Poynt p) {
 		double x = p.getX();
 		double y = p.getY();
 
@@ -502,9 +531,9 @@ public class CropView extends View {
 	 * @param p
 	 * @return
 	 */
-	private boolean isDiagonal(Pointer p) {
+	private boolean isDiagonal(Poynt p) {
 
-		Pointer diagonalPoint = mCornerHandle.getNext().getNext();
+		Poynt diagonalPoint = mCornerHandle.getNext().getNext();
 		double minimumLength = 2 * (mCornerHandle.getDistance(diagonalPoint) / 3);
 
 		if (p.getDistance(diagonalPoint) > minimumLength) {
@@ -521,7 +550,7 @@ public class CropView extends View {
 	 * @author x
 	 * 
 	 */
-	public class Pointer {
+	public class Poynt {
 
 		// X coordinate
 		private double x;
@@ -530,15 +559,15 @@ public class CropView extends View {
 		private double y;
 
 		// Next point to current point.
-		private Pointer next;
+		private Poynt next;
 		
 		// Center point to current point.
-		private Pointer center;
+		private Poynt center;
 
 		/**
 		 * Default Constructor.
 		 */
-		public Pointer() {
+		public Poynt() {
 			this(0, 0);
 		}
 
@@ -547,7 +576,7 @@ public class CropView extends View {
 		 * 
 		 * @param points
 		 */
-		public Pointer(double[] points) {
+		public Poynt(double[] points) {
 			this();
 			set(points);
 		}
@@ -573,7 +602,7 @@ public class CropView extends View {
 		 * @param x
 		 * @param y
 		 */
-		public Pointer(double x, double y) {
+		public Poynt(double x, double y) {
 			this.x = x;
 			this.y = y;
 		}
@@ -629,7 +658,7 @@ public class CropView extends View {
 		 * 
 		 * @param p
 		 */
-		public void setNext(Pointer p) {
+		public void setNext(Poynt p) {
 			this.next = p;
 		}
 
@@ -638,7 +667,7 @@ public class CropView extends View {
 		 * 
 		 * @return next
 		 */
-		public Pointer getNext() {
+		public Poynt getNext() {
 			return next;
 		}
 		
@@ -647,7 +676,7 @@ public class CropView extends View {
 		 * 
 		 * @param p
 		 */
-		public void setCenter(Pointer p) {
+		public void setCenter(Poynt p) {
 			this.center = p;
 		}
 
@@ -656,7 +685,7 @@ public class CropView extends View {
 		 * 
 		 * @return next
 		 */
-		public Pointer getCenter() {
+		public Poynt getCenter() {
 			return center;
 		}
 
@@ -666,7 +695,7 @@ public class CropView extends View {
 		 * @param p
 		 * @return distance
 		 */
-		public double getDistance(Pointer p) {
+		public double getDistance(Poynt p) {
 			return Math.sqrt(Math.pow((p.getX() - this.x), 2) + Math.pow((p.getY() - this.y), 2));
 		}
 
@@ -676,8 +705,8 @@ public class CropView extends View {
 		 * @param p
 		 * @return distance
 		 */
-		public Pointer getCenter(Pointer p) {
-			return new Pointer((x + p.getX()) / 2, (y + p.getY()) / 2);
+		public Poynt getCenter(Poynt p) {
+			return new Poynt((x + p.getX()) / 2, (y + p.getY()) / 2);
 		}
 
 		/**
@@ -714,11 +743,11 @@ public class CropView extends View {
 
 	}
 
-	public class Liner {
+	public class Lyne {
 
-		private Pointer start;
+		private Poynt start;
 
-		private Pointer end;
+		private Poynt end;
 
 		private double sX;
 
@@ -728,7 +757,7 @@ public class CropView extends View {
 
 		private double eY;
 
-		public Liner(Pointer s, Pointer e) {
+		public Lyne(Poynt s, Poynt e) {
 			this.start = s;
 			this.end = s;
 
@@ -748,23 +777,23 @@ public class CropView extends View {
 			setEY(eY);
 		}
 
-		public void setStart(Pointer s) {
+		public void setStart(Poynt s) {
 			this.start = s;
 			this.sX = s.getX();
 			this.sY = s.getY();
 		}
 
-		public Pointer getStart() {
+		public Poynt getStart() {
 			return this.start;
 		}
 
-		public void setEnd(Pointer e) {
+		public void setEnd(Poynt e) {
 			this.end = e;
 			this.eX = e.getX();
 			this.eY = e.getY();
 		}
 
-		public Pointer getEnd() {
+		public Poynt getEnd() {
 			return this.end;
 		}
 
@@ -804,8 +833,8 @@ public class CropView extends View {
 			return this.eX;
 		}
 
-		public Pointer getIntersection(Liner l) {
-			Pointer iCPoint = new Pointer();
+		public Poynt getIntersection(Lyne l) {
+			Poynt iCPoint = new Poynt();
 			double nSX = l.getSX();
 			double nSY = l.getSY();
 			double nEX = l.getEX();

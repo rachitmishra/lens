@@ -40,7 +40,8 @@ import android.widget.Toast;
 
 import com.practo.lens.view.CropView;
 import com.practo.lens.view.CropView.Helper;
-import com.practo.lens.view.CropView.Pointer;
+import com.practo.lens.view.CropView.Lyne;
+import com.practo.lens.view.CropView.Poynt;
 
 public class Home extends Activity {
 
@@ -62,9 +63,11 @@ public class Home extends Activity {
 
 	private static final int REQUEST_IMAGE_SELECT = 11;
 
-	private List<Pointer> cropCorners = new ArrayList<Pointer>();
+	private List<Poynt> cropCorners = new ArrayList<Poynt>();
+	
+	private List<Lyne> cropLines = new ArrayList<Lyne>();
 
-	private List<Pointer> detectedCropCorners = new ArrayList<Pointer>();
+	private List<Poynt> detectedCropCorners = new ArrayList<Poynt>();
 
 	private static final String TAG = "Tagged";
 
@@ -79,7 +82,7 @@ public class Home extends Activity {
 	private File photoFile;
 
 	private String mCurrentPhotoPath;
-
+	
 	public BaseLoaderCallback mOpenCVLoaderCallback = new BaseLoaderCallback(this) {
 
 		@Override
@@ -442,7 +445,7 @@ public class Home extends Activity {
 	public Mat doPerspectiveCrop(Mat sourceMatrix) {
 
 		if (captureCropView != null) {
-			cropCorners = captureCropView.sortPoints(captureCropView.getCornerHandles());
+			cropCorners = captureCropView.sortPoints(captureCropView.getCorners());
 		}
 
 		List<Point> inputMatrixPoints = new ArrayList<Point>();
