@@ -39,8 +39,7 @@
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:visibility="gone" >
+                android:layout_weight="1" >
 
                 <ImageView
                     android:id="@+id/edgeImageView"
@@ -64,7 +63,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:src="@drawable/ic_launcher" />
+                android:src="@drawable/ic_launcher"
+                android:visibility="gone" />
 
         </LinearLayout>
     </LinearLayout>
@@ -93,14 +93,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Select" />
-	<!--  
+ 
         <Button
             android:id="@+id/edge"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Edge" />-->
-
+            android:text="Edge" />
         <Button
             android:id="@+id/crop"
             android:layout_width="0dp"
