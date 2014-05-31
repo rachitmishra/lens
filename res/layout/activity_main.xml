@@ -9,26 +9,12 @@
         android:layout_height="match_parent"
         android:layout_weight="1" >
 
-        <FrameLayout
+        <com.practo.lens.view.LensView
+            android:id="@+id/sourceV"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1" >
-
-            <ImageView
-                android:id="@+id/imageView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_launcher" />
-
-            <com.practo.lens.view.CropView
-                android:id="@+id/cropView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="8dp"
-                android:layout_weight="1" />
-        </FrameLayout>
+        </com.practo.lens.view.LensView>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -36,27 +22,12 @@
             android:layout_weight="1"
             android:orientation="vertical" >
 
-            <FrameLayout
+            <com.practo.lens.view.LensView
+                android:id="@+id/resultV"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" >
-
-                <ImageView
-                    android:id="@+id/edgeImageView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:src="@drawable/ic_launcher" />
-
-                <com.practo.lens.view.CropView
-                    android:id="@+id/edgeCropView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_margin="8dp"
-                    android:layout_weight="1"
-                    android:visibility="visible" />
-
-            </FrameLayout>
+            </com.practo.lens.view.LensView>
 
             <ImageView
                 android:id="@+id/cropImageView"
@@ -65,7 +36,6 @@
                 android:layout_weight="1"
                 android:src="@drawable/ic_launcher"
                 android:visibility="gone" />
-
         </LinearLayout>
     </LinearLayout>
 
@@ -93,13 +63,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Select" />
- 
+
         <Button
             android:id="@+id/edge"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Edge" />
+
         <Button
             android:id="@+id/crop"
             android:layout_width="0dp"

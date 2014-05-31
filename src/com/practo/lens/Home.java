@@ -27,7 +27,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -37,24 +36,17 @@ import android.util.TypedValue;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.practo.lens.view.CropView;
-import com.practo.lens.view.CropView.Helper;
-import com.practo.lens.view.CropView.Poynt;
+import com.practo.lens.helpers.Helper;
+import com.practo.lens.helpers.Poynt;
+import com.practo.lens.view.LensView;
 
 public class Home extends Activity {
 
-	private CropView captureCropView, edgeCropView;
+	private LensView sourceView, resultView;
 
-	private ImageView captureImageView;
-
-	private ImageView cropImageView;
-
-	private ImageView edgeImageView;
-
-	private Mat sourceMatrix, resultMatrix;
+	private Mat sourceMatrix;
 
 	private Bitmap sourceBitmap, resultBitmap;
 
@@ -68,9 +60,7 @@ public class Home extends Activity {
 
 	private static final String TAG = "Tagged";
 
-	private double mDefaultAspectRatio, mWidthRatio, mHeightRatio;
-
-	private double mIntrinsicOffset;
+	private double mDefaultAspectRatio;
 
 	private int mHeight;
 
@@ -108,11 +98,8 @@ public class Home extends Activity {
 	}
 
 	private void setupUI() {
-		captureImageView = (ImageView) findViewById(R.id.imageView);
-		captureCropView = (CropView) findViewById(R.id.cropView);
-		edgeCropView = (CropView) findViewById(R.id.edgeCropView);
-		edgeImageView = (ImageView) findViewById(R.id.edgeImageView);
-		cropImageView = (ImageView) findViewById(R.id.cropImageView);
+		sourceView = (LensView) findViewById(R.id.sourceV);
+		resultView = (LensView) findViewById(R.id.resultV);
 		crop = (Button) findViewById(R.id.crop);
 		cancel = (Button) findViewById(R.id.cancel);
 		edge = (Button) findViewById(R.id.edge);
@@ -145,11 +132,9 @@ public class Home extends Activity {
 
 					doEdgeDetect(sourceMatrix);
 
-					edgeImageView.setImageBitmap(sourceBitmap);
+					sourceView.setImageBitmap(sourceBitmap);
 
-					edgeCropView.setCorners(detectedCorners);
-
-					edgeCropView.invalidate();
+					sourceView.setCorners(detectedCorners);
 
 				} catch (Exception e) {
 
@@ -192,8 +177,7 @@ public class Home extends Activity {
 
 			@Override
 			public void onClick(View arg0) {
-				captureCropView.setVisibility(View.VISIBLE);
-				captureCropView.setDefaultCorners();
+
 				Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 				if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
 
@@ -214,8 +198,7 @@ public class Home extends Activity {
 
 			@Override
 			public void onClick(View arg0) {
-				captureCropView.setVisibility(View.VISIBLE);
-				captureCropView.setDefaultCorners();
+				sourceView.setDefault(true);
 				Intent selectPictureIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
 				if (selectPictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -264,10 +247,9 @@ public class Home extends Activity {
 	}
 
 	private void setPicture(int requestCode, Intent data) {
-		captureCropView.setVisibility(View.VISIBLE);
-		captureCropView.setDefaultCorners();
-		int layoutWidth = captureImageView.getWidth();
-		int layoutHeight = captureImageView.getHeight();
+		sourceView.setDefault(true);
+		int layoutWidth = sourceView.getWidth();
+		int layoutHeight = sourceView.getHeight();
 
 		BitmapFactory.Options bmOptions = new BitmapFactory.Options();
 		bmOptions.inJustDecodeBounds = true;
@@ -283,9 +265,6 @@ public class Home extends Activity {
 
 			photoWidth = bmOptions.outWidth;
 			photoHeight = bmOptions.outHeight;
-			
-			mWidthRatio = photoWidth / layoutWidth;
-			mHeightRatio = photoWidth / layoutHeight;
 
 			mDefaultAspectRatio = Math.min(photoWidth / layoutWidth, photoHeight / layoutHeight);
 
@@ -294,7 +273,7 @@ public class Home extends Activity {
 			bmOptions.inPurgeable = true;
 
 			bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
-			captureImageView.setImageBitmap(bitmap);
+			sourceView.setImageBitmap(bitmap);
 			break;
 		case REQUEST_IMAGE_SELECT:
 			Uri selectedImage = data.getData();
@@ -308,9 +287,6 @@ public class Home extends Activity {
 
 			photoWidth = bmOptions.outWidth;
 			photoHeight = bmOptions.outHeight;
-			
-			mWidthRatio = photoWidth / layoutWidth;
-			mHeightRatio = photoWidth / layoutHeight;
 
 			mDefaultAspectRatio = Math.min(photoWidth / layoutWidth, photoHeight / layoutHeight);
 
@@ -320,7 +296,7 @@ public class Home extends Activity {
 
 			cursor.close();
 			bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
-			captureImageView.setImageBitmap(bitmap);
+			sourceView.setImageBitmap(bitmap);
 			break;
 
 		default:
@@ -343,20 +319,22 @@ public class Home extends Activity {
 		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 
 		resultBitmap = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
-		
-		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
-		
-	//	Imgproc.threshold(tempMatrix, tempMatrix, 155, 255, Imgproc.THRESH_BINARY_INV);
-		
-		Imgproc.Canny(tempMatrix, tempMatrix, 50, 50);
-		
-		Utils.matToBitmap(tempMatrix, resultBitmap);
-		
-		edgeImageView.setImageBitmap(resultBitmap);
-		
-		//Imgproc.blur(tempMatrix, tempMatrix, tempMatrix.size());
 
-	//	Imgproc.dilate(tempMatrix, tempMatrix, new Mat(), new Point(-1, -1), 1);
+		Imgproc.cvtColor(tempMatrix, tempMatrix, Imgproc.COLOR_BGR2GRAY);
+
+		// Imgproc.threshold(tempMatrix, tempMatrix, 155, 255,
+		// Imgproc.THRESH_BINARY_INV);
+
+		Imgproc.Canny(tempMatrix, tempMatrix, 50, 50);
+
+		Utils.matToBitmap(tempMatrix, resultBitmap);
+
+		resultView.setImageBitmap(resultBitmap);
+
+		// Imgproc.blur(tempMatrix, tempMatrix, tempMatrix.size());
+
+		// Imgproc.dilate(tempMatrix, tempMatrix, new Mat(), new Point(-1, -1),
+		// 1);
 
 		Imgproc.findContours(tempMatrix, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
@@ -385,35 +363,21 @@ public class Home extends Activity {
 		}
 
 		double[] tempDouble = approxCurveMatrix.get(0, 0);
-		Poynt pA = captureCropView.new Poynt(tempDouble[0], tempDouble[1]);
+		Poynt pA = new Poynt(tempDouble[0], tempDouble[1]);
 
 		tempDouble = approxCurveMatrix.get(1, 0);
-		Poynt pB = captureCropView.new Poynt(tempDouble[0], tempDouble[1]);
+		Poynt pB = new Poynt(tempDouble[0], tempDouble[1]);
 
 		tempDouble = approxCurveMatrix.get(2, 0);
-		Poynt pC = captureCropView.new Poynt(tempDouble[0], tempDouble[1]);
+		Poynt pC = new Poynt(tempDouble[0], tempDouble[1]);
 
 		tempDouble = approxCurveMatrix.get(3, 0);
-		Poynt pD = captureCropView.new Poynt(tempDouble[0], tempDouble[1]);
+		Poynt pD = new Poynt(tempDouble[0], tempDouble[1]);
 
 		detectedCorners.add(pA);
 		detectedCorners.add(pB);
 		detectedCorners.add(pC);
 		detectedCorners.add(pD);
-	}
-
-	private List<Poynt> getPointsOnImage(List<Poynt> corners) {
-		List<Poynt> temp = new ArrayList<Poynt>();
-		Matrix inverse = new Matrix();
-		captureImageView.getImageMatrix().invert(inverse);
-
-		for (Poynt pointer : corners) {
-			float[] newCorner = new float[] { (float) pointer.getX(), (float) pointer.getY() };
-			inverse.mapPoints(newCorner);
-			temp.add(captureCropView.new Poynt(newCorner[0], newCorner[1]));
-		}
-
-		return temp;
 	}
 
 	public Mat deSkew(Mat tempMatrix, double angle) {
@@ -427,18 +391,12 @@ public class Home extends Activity {
 		List<Poynt> cropCorners = new ArrayList<Poynt>();
 		double skewAngle = 0;
 
-		if (captureCropView != null) {
-			cropCorners = captureCropView.sortCorners(captureCropView.getCorners());
-			cropCorners = getPointsOnImage(cropCorners);
-			skewAngle = captureCropView.getSkewAngle(captureCropView.getCorners());
-		}
+		cropCorners = sourceView.getPointsOnImage(Poynt.sortPoynts(sourceView.getCropCorners()));
+		skewAngle = Poynt.getSkewAngle(sourceView.getCropCorners());
 
 		Log.w("Tagged", "Skew angle " + skewAngle);
 
 		List<Point> inputMatrixPoints = new ArrayList<Point>();
-
-		mIntrinsicOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, captureCropView.getPaddingLeft(), getResources()
-				.getDisplayMetrics());
 
 		Point iPointTopLeft = new Point(cropCorners.get(0).getX(), cropCorners.get(0).getY());
 		Point iPointTopRight = new Point(cropCorners.get(1).getX(), cropCorners.get(1).getY());
