@@ -1,0 +1,16 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+	
+    <item
+        android:id="@+id/action_capture"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="Capture"
+        android:icon="@drawable/ic_menu_capture"/>
+     <item
+       android:id="@+id/action_select"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="Choose"
+        android:icon="@drawable/ic_menu_choose"/>
+
+</menu>

@@ -17,17 +17,17 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.Common" >
         <activity
-            android:name="in.ceeq.lens.Home"
+            android:name="in.ceeq.lens.activities.Home"
             android:label="@string/app_name" >
+        </activity>
+        <activity
+            android:name="in.ceeq.lens.activities.Editer"
+            android:uiOptions="splitActionBarWhenNarrow" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <activity
-            android:name="in.ceeq.lens.Cropper"
-             >
         </activity>
     </application>
 
